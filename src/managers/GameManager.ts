@@ -775,7 +775,6 @@ export class GameManager {
         this.network.latestServerSnapshotProcessed = { ...this.network.latestServerSnapshot };
         const selfData = this.network.latestServerSnapshotProcessed.players.find(player => player.id === this.player.id);
         if (!selfData  || !this.player.sprite) {
-            console.warn('skipping reconciliation, no self data or player sprite');
             return;
         }
 
@@ -789,10 +788,8 @@ export class GameManager {
 
 
         if (tick >= this.gameState.localTick) {
-            //console.warn(`Server tick ${tick} is ahead of client tick ${this.gameState.localTick}. Syncing client position.`);
             // Server has marched ahead of the client...
             // As a temporary fix, we will simply sync the clint position with the server position
-            //console.error(`Server tick ${tick} is ahead of client tick ${this.gameState.localTick}. Syncing client position.`);
             this.player.sprite.syncPosition(selfData.x, selfData.y, selfData.vx, selfData.vy);
             this.network.stateBuffer[serverStateBufferIndex] = { tick: tick, position: { x: selfData.x, y: selfData.y } };
             this.gameState.localTick = tick;
@@ -801,7 +798,6 @@ export class GameManager {
 
         // Temp fix for bug where this is undefined :()
         if (!clientPosition){
-            console.warn(`No client position found for buffer index ${serverStateBufferIndex} at tick ${tick}, cannot reconcile`);
             return;
         } 
 
@@ -810,19 +806,22 @@ export class GameManager {
 
         if (Vector2.len(positionError.x, positionError.y) > 0.0001) {
             this.player.sprite.syncPosition(selfData.x, selfData.y, selfData.vx, selfData.vy);
-            this.network.stateBuffer[serverStateBufferIndex].position = { x: selfData.x, y: selfData.y };
+            if (this.network.stateBuffer[serverStateBufferIndex] !== undefined) {;
+                this.network.stateBuffer[serverStateBufferIndex].position = { x: selfData.x, y: selfData.y };
+            }
             let tickToResimulate = tick + 1;
             while (tickToResimulate < this.gameState.localTick) {
                 const bufferIndex = tickToResimulate % this.BUFFER_SIZE;
                 const inputVector = this.network.inputBuffer[bufferIndex]?.vector;
                 if (!inputVector) {
-                    console.warn(`No input vector found for buffer index ${bufferIndex} at tick ${tickToResimulate}`);
                     tickToResimulate++;
                     continue; // No input to resimulate for this tick
                 }
 
                 this.player.sprite.update(this.network.inputBuffer[bufferIndex].vector, this.MIN_S_BETWEEN_TICKS);
-                this.network.stateBuffer[bufferIndex].position = this.player.sprite.getPositionVector();
+                if (this.network.stateBuffer[bufferIndex] !== undefined) {
+                    this.network.stateBuffer[bufferIndex].position = this.player.sprite.getPositionVector();
+                }
                 tickToResimulate++;
             }
         }
