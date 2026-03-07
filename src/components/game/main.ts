@@ -27,7 +27,6 @@ import { MenuManager } from './managers/MenuManager';
 import { createLoadingScreen, removeLoadingScreen, updateLoadingProgress } from './ui/Loading';
 
 import '../../style.css';
-import { act } from 'react';
 
 // ── SVG icons for menu items (24x24 viewBox) ──────────────────────────
 const ICONS = {

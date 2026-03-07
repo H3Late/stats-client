@@ -28,7 +28,6 @@ import type { InputPayload, NetworkState, PlayerScore, PlayerServerState, Projec
 import type { GameState, PlayerData, WorldObjects } from '../types/game.types';
 import { SceneManager } from './SceneManager';
 import { CameraManager } from './CameraManager';
-import { removeLoadingScreen } from '../ui/Loading';
 
 
 
