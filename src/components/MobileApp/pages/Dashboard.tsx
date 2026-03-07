@@ -159,7 +159,8 @@ export default function Dashboard() {
 
           <footer className="text-center font-retro text-sm md:text-base text-muted-foreground py-4">
             <p>Tracking H3 Podcast YouTube Live Stream Lateness</p>
-            <p style={{ fontSize: 12}}>(This is a fan made website and is not associated with H3 Podcast, with ✌️ & ❤️)</p>
+            <p style={{ marginTop: 10}}>This is a fan made website and is not associated with the H3 Podcast</p>
+            <p style={{ fontSize: 12 }}>  (with ✌️ & ❤️) </p>
 
             <p className="text-xs mt-1 md:hidden" data-testid="text-last-updated-mobile">
               Last Updated: {lastUpdatedDate}
