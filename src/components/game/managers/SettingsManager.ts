@@ -429,7 +429,7 @@ export class SettingsManager {
         }
     }
 
-    private toggleSettingsModal(): void {
+    public toggleSettingsModal(): void {
         try {
             if (this.settingsModal) {
                 this.closeSettingsModal();

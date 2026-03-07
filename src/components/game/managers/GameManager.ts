@@ -22,12 +22,13 @@ import { AudioManager } from './AudioManager';
 import { DevModeManager } from './DevModeManager';
 import { TvManager } from './TvManager';
 import { BugReportManager } from './BugReportManager';
-import { loginScreen } from '../ui/LoginScreen';
+import { loginScreen, cleanupLoginScreen } from '../ui/LoginScreen';
 import { SettingsManager } from './SettingsManager';
 import type { InputPayload, NetworkState, PlayerScore, PlayerServerState, ProjectileServerState, ServerStateUpdate } from '../types/network.types';
 import type { GameState, PlayerData, WorldObjects } from '../types/game.types';
 import { SceneManager } from './SceneManager';
 import { CameraManager } from './CameraManager';
+import { removeLoadingScreen } from '../ui/Loading';
 
 
 
@@ -478,7 +479,7 @@ export class GameManager {
         }
     }
 
-    private cleanupSession = (): void => {
+    public cleanupSession = (): void => {
         try {
             this.networkManager.cleanup();
             ErrorHandler.getInstance().logWarning(
@@ -524,7 +525,8 @@ export class GameManager {
             BugReportManager.getInstance().cleanup();
             SceneManager.getInstance().cleanup();
             this.scoreManager.destroy();
-
+            
+            cleanupLoginScreen();
         } catch (error) {
             ErrorHandler.getInstance().handleError(
                 error as Error,

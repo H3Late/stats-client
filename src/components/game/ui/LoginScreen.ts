@@ -254,3 +254,10 @@ export const loginScreen = () => new Promise<{ name: string, region: Region }>((
     // Focus input with slight delay to prevent visual glitches
     setTimeout(() => input.focus(), 50);
 });
+
+export const cleanupLoginScreen = () => {
+    const modalContainer = document.querySelector('div[style*="position: fixed"]');
+    if (modalContainer) {
+        document.body.removeChild(modalContainer);
+    }
+}

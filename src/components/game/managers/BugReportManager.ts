@@ -229,7 +229,7 @@ export class BugReportManager {
     /**
      * Toggle the bug report modal visibility
      */
-    private toggleBugReportModal(): void {
+    public toggleBugReportModal(): void {
         try {
             if (this.bugReportModal) {
                 this.closeBugReportModal();

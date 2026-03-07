@@ -1,20 +1,19 @@
 import './style.css';
 import runGame from './components/game/main';
 
-const isMobile = () => {
-    if(window.matchMedia("(any-hover:none)").matches) {
-        return true;
-    } else {
-        return false;
-    }
+const isMobile = () => window.matchMedia('(any-hover:none)').matches;
+
+const wantsDashboard = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') === 'data';
 };
 
 (async () => {
-    if (isMobile()) {
-        // Render the React mobile app and exit early
+    if (isMobile() || wantsDashboard()) {
+        // Render the React dashboard and exit early
         const { renderMobileApp } = await import('./components/MobileApp/main');
         renderMobileApp();
-        return; // Exit early to avoid initializing the game
+        return;
     }
 
     runGame();
