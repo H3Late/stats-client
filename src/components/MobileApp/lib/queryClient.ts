@@ -2,7 +2,7 @@ import { QueryClient, type QueryFunction } from "@tanstack/react-query";
 import { config } from "../../game/utils/config";
 
 // Get the base API URL from environment variables
-const API_BASE_URL = config.API_URL;
+const API_BASE_URL = config.YOUTUBE_API_URL;
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
