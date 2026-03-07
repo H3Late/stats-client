@@ -1,85 +1,34 @@
 import { Card } from "../components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
-import type { DailyStats } from "../shared/schema";
+import type { DayStatsResponse } from "../shared/schema";
 import { formatLateTime } from "../lib/utils";
 
 interface DayOfWeekChartProps {
-  dailyStats: DailyStats;
+  dailyStats: DayStatsResponse[];
 }
 
 export function DayOfWeekChart({ dailyStats }: DayOfWeekChartProps) {
+  const dayLookup = new Map(dailyStats.map((item) => [item.day_index, item]));
+
   const chartData = [
-    { 
-      day: 'SUN', 
-      avgLateMinutes: dailyStats.sunday.count > 0 
-        ? Math.floor(dailyStats.sunday.totalLateTime / dailyStats.sunday.count / 60) 
-        : 0,
-      avgLateSeconds: dailyStats.sunday.count > 0 
-        ? Math.floor(dailyStats.sunday.totalLateTime / dailyStats.sunday.count) 
-        : 0,
-      count: dailyStats.sunday.count 
-    },
-    { 
-      day: 'MON', 
-      avgLateMinutes: dailyStats.monday.count > 0 
-        ? Math.floor(dailyStats.monday.totalLateTime / dailyStats.monday.count / 60) 
-        : 0,
-      avgLateSeconds: dailyStats.monday.count > 0 
-        ? Math.floor(dailyStats.monday.totalLateTime / dailyStats.monday.count) 
-        : 0,
-      count: dailyStats.monday.count 
-    },
-    { 
-      day: 'TUE', 
-      avgLateMinutes: dailyStats.tuesday.count > 0 
-        ? Math.floor(dailyStats.tuesday.totalLateTime / dailyStats.tuesday.count / 60) 
-        : 0,
-      avgLateSeconds: dailyStats.tuesday.count > 0 
-        ? Math.floor(dailyStats.tuesday.totalLateTime / dailyStats.tuesday.count) 
-        : 0,
-      count: dailyStats.tuesday.count 
-    },
-    { 
-      day: 'WED', 
-      avgLateMinutes: dailyStats.wednesday.count > 0 
-        ? Math.floor(dailyStats.wednesday.totalLateTime / dailyStats.wednesday.count / 60) 
-        : 0,
-      avgLateSeconds: dailyStats.wednesday.count > 0 
-        ? Math.floor(dailyStats.wednesday.totalLateTime / dailyStats.wednesday.count) 
-        : 0,
-      count: dailyStats.wednesday.count 
-    },
-    { 
-      day: 'THU', 
-      avgLateMinutes: dailyStats.thursday.count > 0 
-        ? Math.floor(dailyStats.thursday.totalLateTime / dailyStats.thursday.count / 60) 
-        : 0,
-      avgLateSeconds: dailyStats.thursday.count > 0 
-        ? Math.floor(dailyStats.thursday.totalLateTime / dailyStats.thursday.count) 
-        : 0,
-      count: dailyStats.thursday.count 
-    },
-    { 
-      day: 'FRI', 
-      avgLateMinutes: dailyStats.friday.count > 0 
-        ? Math.floor(dailyStats.friday.totalLateTime / dailyStats.friday.count / 60) 
-        : 0,
-      avgLateSeconds: dailyStats.friday.count > 0 
-        ? Math.floor(dailyStats.friday.totalLateTime / dailyStats.friday.count) 
-        : 0,
-      count: dailyStats.friday.count 
-    },
-    { 
-      day: 'SAT', 
-      avgLateMinutes: dailyStats.saturday.count > 0 
-        ? Math.floor(dailyStats.saturday.totalLateTime / dailyStats.saturday.count / 60) 
-        : 0,
-      avgLateSeconds: dailyStats.saturday.count > 0 
-        ? Math.floor(dailyStats.saturday.totalLateTime / dailyStats.saturday.count) 
-        : 0,
-      count: dailyStats.saturday.count 
-    },
-  ];
+    { day: "SUN", index: 0 },
+    { day: "MON", index: 1 },
+    { day: "TUE", index: 2 },
+    { day: "WED", index: 3 },
+    { day: "THU", index: 4 },
+    { day: "FRI", index: 5 },
+    { day: "SAT", index: 6 },
+  ].map(({ day, index }) => {
+    const stats = dayLookup.get(index);
+    const avgLateSeconds = stats?.avg_lateness_seconds ?? 0;
+
+    return {
+      day,
+      avgLateMinutes: avgLateSeconds / 60,
+      avgLateSeconds,
+      count: stats?.stream_count ?? 0,
+    };
+  });
 
   return (
     <Card className="relative overflow-hidden border-2 border-secondary/40 bg-card/95 backdrop-blur-sm p-6 shadow-lg shadow-secondary/20">

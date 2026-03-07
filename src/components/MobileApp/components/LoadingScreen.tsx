@@ -66,7 +66,7 @@ export function LoadingScreen() {
           data-testid="text-loading"
 
         >
-          LOADING STATS...
+          LOADING DATA...
         </div>
         
 

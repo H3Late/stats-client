@@ -1,6 +1,6 @@
 {
   "name": "L3L3 Late Tracker",
-  "short_name": "L3L3",
+  "short_name": "H3 Late",
   "description": "Track H3H3's lateness stats and play the L3L3 multiplayer game!",
   "icons": [
     { "src": "/images/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },

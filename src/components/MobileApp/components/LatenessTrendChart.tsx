@@ -1,10 +1,10 @@
 import { Card } from "../components/ui/card";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
-import type { Livestream } from "../shared/schema";
+import type { TrendLivestream } from "../shared/schema";
 import { formatLateTime } from "../lib/utils";
 
 interface LatenessTrendChartProps {
-  livestreams: Livestream[];
+  livestreams: TrendLivestream[];
 }
 
 export function LatenessTrendChart({ livestreams }: LatenessTrendChartProps) {

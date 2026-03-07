@@ -1,26 +1,84 @@
 import { useQuery } from "@tanstack/react-query";
-import type { StatsResponse, LivestreamsResponse } from "../shared/schema";
+import { useLocation } from "wouter";
+import type {
+  DayStatsResponse,
+  LivestreamRecord,
+  LivestreamStatsResponse,
+  PaginatedResponse,
+  TrendLivestream,
+} from "../shared/schema";
 import { StatCard } from "../components/StatCard";
 import { TotalStatsCard } from "../components/TotalStatsCard";
 import { LatenessTrendChart } from "../components/LatenessTrendChart";
 import { DayOfWeekChart } from "../components/DayOfWeekChart";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { ThemeToggle } from "../components/ThemeToggle";
-import { Clock, TrendingUp, Tv } from "lucide-react";
-import { formatLateTime } from "../lib/utils";
+import { Button } from "../components/ui/button";
+import { Clock, TrendingUp } from "lucide-react";
+import { formatDurationVerbose, formatLateTime, formatTimeStatusDelta } from "../lib/utils";
+import Logo from "../../game/images/l3l3.png";
 
 export default function Dashboard() {
-  const { data: stats, isLoading: statsLoading } = useQuery<StatsResponse>({
-    queryKey: ['/api/stats'],
+  const [, setLocation] = useLocation();
+
+  const { data: stats, isLoading: statsLoading } = useQuery<LivestreamStatsResponse>({
+    queryKey: ['/api/livestream/stats'],
   });
 
-  const { data: livestreamsData, isLoading: livestreamsLoading } = useQuery<LivestreamsResponse>({
-    queryKey: ['/api/livestreams'],
+  const { data: dailyStats, isLoading: dailyStatsLoading } = useQuery<DayStatsResponse[]>({
+    queryKey: ['/api/livestream/stats/day'],
   });
 
-  if (statsLoading || livestreamsLoading || !stats || !livestreamsData) {
+  const { data: recentLivestreamPage, isLoading: recentLivestreamLoading } = useQuery<PaginatedResponse<LivestreamRecord>>({
+    queryKey: ['/api/livestream?size=1&sort=createdAt,desc'],
+  });
+
+  const { data: trendLivestreamPage, isLoading: trendLivestreamLoading } = useQuery<PaginatedResponse<LivestreamRecord>>({
+    queryKey: ['/api/livestream?size=10&timeStatus=LATE&sort=actualStart,desc'],
+  });
+
+  if (
+    statsLoading ||
+    dailyStatsLoading ||
+    recentLivestreamLoading ||
+    trendLivestreamLoading ||
+    !stats ||
+    !dailyStats ||
+    !recentLivestreamPage ||
+    !trendLivestreamPage
+  ) {
     return <LoadingScreen />;
   }
+
+  const mostRecentLivestream = recentLivestreamPage.content[0] ?? null;
+
+
+  const trendLivestreams: TrendLivestream[] = trendLivestreamPage.content.map((stream) => ({
+    videoId: stream.videoId,
+    title: stream.title,
+    actualStartTime: stream.actualStart ?? stream.createdAt,
+    scheduledStartTime: stream.scheduledStart,
+    lateTime: Math.max(0, stream.diffSeconds),
+  }));
+
+  const averageLateSeconds = stats.avg_lateness_seconds;
+  const recordLateSeconds = stats.record_lateness_seconds;
+  const totalLateTimeHumanReadable = formatDurationVerbose(stats.total_late_time_seconds);
+
+  const mostLateTitle =
+    stats.record_video_title ?? (stats.record_video_id ? `Video ID: ${stats.record_video_id}` : "No record data");
+
+  const mostRecentValue = mostRecentLivestream
+    ? mostRecentLivestream.timeStatus === "ON_TIME" ? "ON TIME!" : formatTimeStatusDelta(mostRecentLivestream.diffSeconds, mostRecentLivestream.timeStatus)
+    : "No data";
+
+  const mostRecentDetail = mostRecentLivestream
+    ? `${mostRecentLivestream.timeStatus} • ${mostRecentLivestream.status}`
+    : undefined;
+
+  const lastUpdatedDate = mostRecentLivestream?.createdAt
+    ? new Date(mostRecentLivestream.createdAt).toLocaleDateString()
+    : "—";
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -35,22 +93,20 @@ export default function Dashboard() {
       <header className="fixed top-0 left-0 right-0 border-b-2 border-primary/40 bg-card/90 backdrop-blur-md shadow-lg shadow-primary/10 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-md bg-primary/20 border-2 border-primary/40">
-              <Tv className="w-6 h-6 md:w-8 md:h-8 text-primary" strokeWidth={2.5} />
-            </div>
+              <img src={Logo} alt="L3L3 Logo" className="w-16 h-16" />
             <div>
-              <h1 className="font-pixel text-xl md:text-2xl text-primary drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" data-testid="heading-main">
-                L3L3
+              <h1 className="font-pixel text-xl md:text-1xl text-primary drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" data-testid="heading-main">
+                H3 POD
               </h1>
-              <p className="font-retro text-sm md:text-base text-muted-foreground hidden sm:block">
-                LATENESS TRACKER
+              <p className="font-retro text-sm md:text-base text-muted-foreground sm:block">
+                LATE TRACKER
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-4">
             <div className="hidden md:block font-retro text-sm text-muted-foreground" data-testid="text-last-updated">
-              Last Updated: {new Date(stats.lastUpdateDate).toLocaleDateString()}
+              Last Updated: {lastUpdatedDate}
             </div>
             <ThemeToggle />
           </div>
@@ -64,33 +120,49 @@ export default function Dashboard() {
             <StatCard
               icon={Clock}
               label="Most Recent"
-              value={formatLateTime(stats.mostRecent.lateTime)}
-              subtitle={stats.mostRecent.title}
+              value={mostRecentValue}
+              subtitle={mostRecentLivestream?.title ?? "No recent stream found"}
+              detail={mostRecentDetail}
+              videoId={mostRecentLivestream?.videoId}
             />
             
             <StatCard
               icon={TrendingUp}
               label="Most Late"
-              value={formatLateTime(stats.max.lateTime)}
-              subtitle={stats.max.title}
+              value={formatLateTime(recordLateSeconds)}
+              subtitle={mostLateTitle}
+              videoId={stats.record_video_id}
             />
           </div>
 
           <TotalStatsCard
-            humanReadable={stats.humanReadable}
-            averageLateTime={stats.averageLateTime}
-            streamCount={stats.streamCount}
+            humanReadable={totalLateTimeHumanReadable}
+            averageLateTime={averageLateSeconds}
+            streamCount={stats.total_streams}
           />
 
           <div className="space-y-6">
-            <LatenessTrendChart livestreams={livestreamsData.livestreams} />
-            <DayOfWeekChart dailyStats={stats.daily} />
+            <LatenessTrendChart livestreams={trendLivestreams} />
+            <DayOfWeekChart dailyStats={dailyStats} />
+          </div>
+
+          <div className="flex justify-center">
+            <Button
+              variant="secondary"
+              className="font-retro uppercase tracking-wide"
+              onClick={() => setLocation('/data')}
+              data-testid="button-view-full-dataset"
+            >
+              View Full Dataset
+            </Button>
           </div>
 
           <footer className="text-center font-retro text-sm md:text-base text-muted-foreground py-4">
             <p>Tracking H3 Podcast YouTube Live Stream Lateness</p>
+            <p style={{ fontSize: 12}}>(This is a fan made website and is not associated with H3 Podcast, with ✌️ & ❤️)</p>
+
             <p className="text-xs mt-1 md:hidden" data-testid="text-last-updated-mobile">
-              Last Updated: {new Date(stats.lastUpdateDate).toLocaleDateString()}
+              Last Updated: {lastUpdatedDate}
             </p>
           </footer>
         </div>
