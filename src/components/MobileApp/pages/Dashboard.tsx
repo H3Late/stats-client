@@ -150,17 +150,18 @@ export default function Dashboard() {
   });
 
   const {
-    data: leaderboardEntries,
+    data: leaderboardPage,
     isPending: leaderboardPending,
     error: leaderboardError,
-  } = useQuery<LeaderboardEntry[]>({
+  } = useQuery<PaginatedResponse<LeaderboardEntry>>({
     queryKey: ["/api/vote/leaderboard/latest"],
     enabled: isVoteResultsDialogOpen && canViewVoteResults,
     staleTime: 0,
   });
 
   const leaderboardErrorMessage = leaderboardError ? getReadableErrorMessage(leaderboardError) : null;
-  const latestActualResult = leaderboardEntries?.[0]?.actualResult;
+  const leaderboardEntries = leaderboardPage?.content ?? [];
+  const latestActualResult = leaderboardEntries[0]?.actualResult;
 
   const openVoteDialog = () => {
     setVoteDirection("LATE");
@@ -536,13 +537,13 @@ export default function Dashboard() {
               </div>
             )}
 
-            {!leaderboardPending && !leaderboardErrorMessage && (leaderboardEntries?.length ?? 0) === 0 && (
+            {!leaderboardPending && !leaderboardErrorMessage && leaderboardEntries.length === 0 && (
               <div className="font-retro text-sm text-muted-foreground" data-testid="text-vote-results-empty">
                 No votes have been submitted yet.
               </div>
             )}
 
-            {!leaderboardPending && !leaderboardErrorMessage && (leaderboardEntries?.length ?? 0) > 0 && (
+            {!leaderboardPending && !leaderboardErrorMessage && leaderboardEntries.length > 0 && (
               <div className="overflow-x-auto rounded-md border border-border/50">
                 <table className="w-full min-w-[640px] border-collapse" data-testid="table-vote-results">
                   <thead>
@@ -554,7 +555,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboardEntries?.map((entry, entryIndex) => (
+                    {leaderboardEntries.map((entry, entryIndex) => (
                       <tr key={`${entry.userName}-${entryIndex}`} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
                         <td className="px-4 py-3 font-retro text-sm text-foreground/90">{entry.userName}</td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground/90">{formatVoteGuess(entry.userGuess)}</td>
