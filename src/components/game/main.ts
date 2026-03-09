@@ -169,7 +169,7 @@ const runGame = async () => {
         menuManager.createMenuUI();
 
         // Initialize game manager
-        const gameManager = new GameManager(app);
+        const gameManager = new GameManager(app, switchToDashboard);
         activeGameManager = gameManager;
         gameManager.initialize();
         
