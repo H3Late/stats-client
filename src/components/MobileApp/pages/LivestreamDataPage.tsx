@@ -168,7 +168,7 @@ export default function LivestreamDataPage() {
 
       <main className="relative z-10 pt-24 pb-8">
         <div className="container mx-auto px-4 space-y-6">
-          <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20">
+          <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20 mt-20">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
 
             <div className="relative z-10 space-y-3">
