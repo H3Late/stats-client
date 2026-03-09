@@ -550,7 +550,7 @@ export default function Dashboard() {
                       <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Username</th>
                       <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Guess</th>
                       <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Actual</th>
-                      <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Proximity Score</th>
+                      <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Off By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -559,7 +559,7 @@ export default function Dashboard() {
                         <td className="px-4 py-3 font-retro text-sm text-foreground/90">{entry.userName}</td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground/90">{formatVoteGuess(entry.userGuess)}</td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground/90">{formatVoteGuess(entry.actualResult)}</td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/90">{entry.proximityScore}</td>
+                        <td className="px-4 py-3 font-retro text-sm text-foreground/90">{formatVoteGuess(entry.proximityScore)}</td>
                       </tr>
                     ))}
                   </tbody>
