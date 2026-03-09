@@ -153,7 +153,7 @@ export const loginScreen = (onViewDataCallback: () => void) => new Promise<{ nam
     const button = document.createElement('button');
     button.textContent = 'Enter Game';
     button.style.cssText = `
-        width: fit-content;
+        width: 225px;
         padding: 12px 24px;
         font-size: 24px;
         font-weight: 500;
@@ -175,7 +175,7 @@ export const loginScreen = (onViewDataCallback: () => void) => new Promise<{ nam
     const viewDataDasboard = document.createElement('button');
     viewDataDasboard.textContent = 'View Dashboard';
     viewDataDasboard.style.cssText = `
-        width: fit-content;
+        width: 225px;
         padding: 12px 24px;
         font-size: 24px;
         font-weight: 500;
