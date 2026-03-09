@@ -52,7 +52,7 @@ export const loginScreen = (onViewDataCallback: () => void) => new Promise<{ nam
     input.placeholder = 'Name';
     input.maxLength = 15;
     input.style.cssText = `
-        width: 100%;
+        width: 280px;
         padding: 12px 15px;
         font-size: 24px;
         border: none;
@@ -76,7 +76,7 @@ export const loginScreen = (onViewDataCallback: () => void) => new Promise<{ nam
     // Create region dropdown (no label)
     const regionSelect = document.createElement('select');
     regionSelect.style.cssText = `
-        width: 100%;
+        width: 280px;
         padding: 12px 15px;
         font-size: 24px;
         border: none;
@@ -153,7 +153,7 @@ export const loginScreen = (onViewDataCallback: () => void) => new Promise<{ nam
     const button = document.createElement('button');
     button.textContent = 'Enter Game';
     button.style.cssText = `
-        width: 225px;
+        width: 280px;
         padding: 12px 24px;
         font-size: 24px;
         font-weight: 500;
@@ -175,7 +175,7 @@ export const loginScreen = (onViewDataCallback: () => void) => new Promise<{ nam
     const viewDataDasboard = document.createElement('button');
     viewDataDasboard.textContent = 'View Dashboard';
     viewDataDasboard.style.cssText = `
-        width: 225px;
+        width: 280px;
         padding: 12px 24px;
         font-size: 24px;
         font-weight: 500;
