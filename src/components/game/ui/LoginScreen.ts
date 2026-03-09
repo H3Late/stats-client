@@ -4,7 +4,7 @@ import l3l3 from '../images/l3l3.png';
 type Region = 'NA' | 'EU' | 'ASIA' | 'GLOBAL';;
 
 
-export const loginScreen = () => new Promise<{ name: string, region: Region }>((resolve) => {
+export const loginScreen = (onViewDataCallback: () => void) => new Promise<{ name: string, region: Region }>((resolve) => {
     // Create modal container with dark overlay
     const modalContainer = document.createElement('div');
     modalContainer.style.cssText = `
@@ -25,7 +25,8 @@ export const loginScreen = () => new Promise<{ name: string, region: Region }>((
     const modal = document.createElement('div');
     modal.style.cssText = `
         background: #1a1a1a;
-        padding: 75px;
+        padding: 30px 72px;
+    
         border-radius: 6px;
         width: 280px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
@@ -150,7 +151,7 @@ export const loginScreen = () => new Promise<{ name: string, region: Region }>((
 
     // Create button
     const button = document.createElement('button');
-    button.textContent = 'Enter';
+    button.textContent = 'Enter Game';
     button.style.cssText = `
         width: fit-content;
         padding: 12px 24px;
@@ -171,6 +172,26 @@ export const loginScreen = () => new Promise<{ name: string, region: Region }>((
     `;
     button.disabled = true;
 
+    const viewDataDasboard = document.createElement('button');
+    viewDataDasboard.textContent = 'View Dashboard';
+    viewDataDasboard.style.cssText = `
+        width: fit-content;
+        padding: 12px 24px;
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        border: none;
+        border-radius: 4px;
+        background: #d2758e;
+        color: white;
+        transition: all 0.2s ease;
+        align-self: center;
+        margin-top: 12px;
+        font-family: 'Pixel', sans-serif;
+    `;
+
+    viewDataDasboard.addEventListener('click', onViewDataCallback);
+
     // Button effects
     button.addEventListener('mouseover', () => {
         if (!button.disabled) {
@@ -182,6 +203,15 @@ export const loginScreen = () => new Promise<{ name: string, region: Region }>((
             button.style.background = '#7462B3';
         }
     });
+
+    viewDataDasboard.addEventListener('mouseover', () => {
+        viewDataDasboard.style.background = '#7462B3';
+    });
+    viewDataDasboard.addEventListener('mouseout', () => {
+        viewDataDasboard.style.background = '#d2758e';
+    });
+
+
 
     // Add input validation
     const checkFormValidity = () => {
@@ -237,7 +267,7 @@ export const loginScreen = () => new Promise<{ name: string, region: Region }>((
 
     // Add minimal version text
     const versionInfo = document.createElement('div');
-    versionInfo.textContent = 'v0.1.0';
+    versionInfo.textContent = 'v0.2.0';
     versionInfo.style.cssText = `
         color: #666;
         font-size: 11px;
@@ -246,7 +276,9 @@ export const loginScreen = () => new Promise<{ name: string, region: Region }>((
         opacity: 0.7;
     `;
     modal.appendChild(button);
+    modal.appendChild(viewDataDasboard);
     modal.appendChild(versionInfo);
+
     
     modalContainer.appendChild(modal);
     document.body.appendChild(modalContainer);
