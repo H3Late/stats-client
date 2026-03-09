@@ -157,7 +157,7 @@ export default function LivestreamDataPage() {
 
             <div className="min-w-0">
               <h1 className="font-pixel text-lg md:text-2xl text-primary truncate drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" data-testid="heading-livestream-data">
-                LIVESTREAM DATASET
+                LIVESTREAMS
               </h1>
             </div>
           </div>
