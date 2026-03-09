@@ -11,9 +11,25 @@ interface StatCardProps {
   detail?: string;
   className?: string;
   videoId?: string | null;
+  actionLabel?: string;
+  actionDisabled?: boolean;
+  onActionClick?: () => void;
+  actionTestId?: string;
 }
 
-export function StatCard({ icon: Icon, label, value, subtitle, detail, className, videoId }: StatCardProps) {
+export function StatCard({
+  icon: Icon,
+  label,
+  value,
+  subtitle,
+  detail,
+  className,
+  videoId,
+  actionLabel,
+  actionDisabled = false,
+  onActionClick,
+  actionTestId,
+}: StatCardProps) {
   const handleWatchOnYouTube = () => {
     if (videoId) {
       window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank', 'noopener,noreferrer');
@@ -59,17 +75,34 @@ export function StatCard({ icon: Icon, label, value, subtitle, detail, className
           </div>
         </div>
 
-        {videoId && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleWatchOnYouTube}
-            className="mt-4 font-retro text-xs uppercase tracking-wide flex items-center gap-2 w-full h-12"
-            data-testid={`button-watch-youtube-${label.toLowerCase().replace(/\s+/g, '-')}`}
-          >
-            <ExternalLink className="w-4 h-4" />
-            Watch on YouTube
-          </Button>
+        {(actionLabel || videoId) && (
+          <div className="mt-4 space-y-2">
+            {actionLabel && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onActionClick}
+                disabled={actionDisabled || !onActionClick}
+                className="font-retro text-xs uppercase tracking-wide flex items-center justify-center gap-2 w-full h-12"
+                data-testid={actionTestId ?? `button-action-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                {actionLabel}
+              </Button>
+            )}
+
+            {videoId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleWatchOnYouTube}
+                className="font-retro text-xs uppercase tracking-wide flex items-center gap-2 w-full h-12"
+                data-testid={`button-watch-youtube-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <ExternalLink className="w-4 h-4" />
+                Watch on YouTube
+              </Button>
+            )}
+          </div>
         )}
       </div>
       

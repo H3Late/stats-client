@@ -82,6 +82,13 @@ export interface DayStatsResponse {
   stream_count: number;
 }
 
+export interface LeaderboardEntry {
+  userName: string;
+  userGuess: number;
+  actualResult: number;
+  proximityScore: number;
+}
+
 // Frontend chart type used after mapping API records
 export interface TrendLivestream {
   videoId: string;
