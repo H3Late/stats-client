@@ -81,6 +81,7 @@ export class GameManager {
     private sceneManager: SceneManager = SceneManager.getInstance();
     private audioManager: AudioManager = AudioManager.getInstance();
     private scoreManager: ScoreManager;
+    private onSwitchToDashboard: () => void;
 
     private controller: Controller;
 
@@ -142,12 +143,13 @@ export class GameManager {
         overlayActive: false
     };
     
-    constructor(app: Application) {
+    constructor(app: Application, onSwitchToDashboard: () => void) {
         this.app = app;
         this.app.renderer.resize(this.GAME_WIDTH, this.GAME_HEIGHT);
         this.controller = new Controller();
         this.gameContainer = new Container();
         this.gameContainer.sortableChildren = true; // Enable z-index sorting
+        this.onSwitchToDashboard = onSwitchToDashboard;
         this.scoreManager = new ScoreManager(this.showKillIndicator.bind(this));
         // Initialize ObjectPools after gameContainer is created
         this.entities.killIndicatorPool = new ObjectPool<KillIndicator>(
@@ -210,7 +212,7 @@ export class GameManager {
         this.bugReportManager.onModalClose(() => this.ui.overlayActive = false);
 
 
-        const { name, region } = await loginScreen();
+        const { name, region } = await loginScreen(this.onSwitchToDashboard);
         this.player.name = name;
 
         this.setupControlListeners();

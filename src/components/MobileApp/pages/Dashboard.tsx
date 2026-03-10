@@ -510,55 +510,55 @@ export default function Dashboard() {
       </Dialog>
 
       <Dialog open={isVoteResultsDialogOpen} onOpenChange={setIsVoteResultsDialogOpen}>
-        <DialogContent className="border-2 border-secondary/40 bg-card/95 backdrop-blur-sm shadow-lg shadow-secondary/20 sm:max-w-3xl">
+        <DialogContent className="border-2 border-secondary/40 bg-card/95 backdrop-blur-sm shadow-lg shadow-secondary/20 w-[95vw] max-w-2xl sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="font-pixel text-xl text-secondary">VOTE RESULTS</DialogTitle>
-            <DialogDescription className="font-retro text-muted-foreground">
+            <DialogTitle className="font-pixel text-lg sm:text-xl text-secondary">VOTE RESULTS</DialogTitle>
+            <DialogDescription className="font-retro text-muted-foreground text-xs sm:text-sm">
               Leaderboard for the latest stream vote predictions.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {latestActualResult !== undefined && (
-              <div className="font-retro text-sm text-muted-foreground" data-testid="text-vote-actual-result">
+              <div className="font-retro text-xs sm:text-sm text-muted-foreground" data-testid="text-vote-actual-result">
                 Actual Result: {formatVoteGuess(latestActualResult)}
               </div>
             )}
 
             {leaderboardPending && (
-              <div className="font-retro text-sm text-muted-foreground" data-testid="text-vote-results-loading">
+              <div className="font-retro text-xs sm:text-sm text-muted-foreground" data-testid="text-vote-results-loading">
                 Loading vote results...
               </div>
             )}
 
             {!leaderboardPending && leaderboardErrorMessage && (
-              <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 font-retro text-sm text-destructive" data-testid="text-vote-results-error">
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 font-retro text-xs sm:text-sm text-destructive" data-testid="text-vote-results-error">
                 {leaderboardErrorMessage}
               </div>
             )}
 
             {!leaderboardPending && !leaderboardErrorMessage && leaderboardEntries.length === 0 && (
-              <div className="font-retro text-sm text-muted-foreground" data-testid="text-vote-results-empty">
+              <div className="font-retro text-xs sm:text-sm text-muted-foreground" data-testid="text-vote-results-empty">
                 No votes have been submitted yet.
               </div>
             )}
 
             {!leaderboardPending && !leaderboardErrorMessage && leaderboardEntries.length > 0 && (
               <div className="overflow-x-auto rounded-md border border-border/50">
-                <table className="w-full min-w-[640px] border-collapse" data-testid="table-vote-results">
+                <table className="w-full border-collapse" data-testid="table-vote-results">
                   <thead>
                     <tr className="border-b border-border/60 bg-muted/20">
-                      <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Username</th>
-                      <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Guess</th>
-                      <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Off By</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-retro text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">Username</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-retro text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">Guess</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-retro text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">Off By</th>
                     </tr>
                   </thead>
                   <tbody>
                     {leaderboardEntries.map((entry, entryIndex) => (
                       <tr key={`${entry.userName}-${entryIndex}`} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/90">{entry.userName}</td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/90">{formatVoteGuess(entry.userGuess)}</td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/90">{formatVoteGuess(entry.proximityScore)}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 break-all">{entry.userName}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.userGuess)}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.proximityScore)}</td>
                       </tr>
                     ))}
                   </tbody>
