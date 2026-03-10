@@ -11,6 +11,7 @@ import type {
 import { StatCard } from "../components/StatCard";
 import { TotalStatsCard } from "../components/TotalStatsCard";
 import { LatenessTrendChart } from "../components/LatenessTrendChart";
+import { TimeStatusPieChart } from "../components/TimeStatusPieChart";
 import { DayOfWeekChart } from "../components/DayOfWeekChart";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -226,7 +227,15 @@ export default function Dashboard() {
           />
 
           <div className="space-y-6">
-            <LatenessTrendChart livestreams={trendLivestreams} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+              <TimeStatusPieChart
+                lateCount={stats.total_late_count}
+                onTimeCount={stats.total_on_time_count}
+                earlyCount={stats.total_early_count}
+                totalStreams={stats.total_streams}
+              />
+              <LatenessTrendChart livestreams={trendLivestreams} />
+            </div>
             <DayOfWeekChart dailyStats={dailyStats} />
           </div>
 
