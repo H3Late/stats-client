@@ -158,7 +158,7 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <div className="hidden md:block font-retro text-sm text-muted-foreground" data-testid="text-last-updated">
               Last Updated: {lastUpdatedDate}
             </div>
