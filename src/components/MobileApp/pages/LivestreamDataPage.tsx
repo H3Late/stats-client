@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { ArrowLeft, Tv } from "lucide-react";
+import { FaYoutube } from "react-icons/fa";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
@@ -300,7 +301,7 @@ export default function LivestreamDataPage() {
                     <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Time Status</th>
                     <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Status</th>
                     <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Duration</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Created</th>
+                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Watch</th>
                   </tr>
                 </thead>
 
@@ -340,7 +341,23 @@ export default function LivestreamDataPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDuration(stream.totalDurationSeconds)}</td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDateTime(stream.createdAt)}</td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="group relative text-[#7462B3] hover:bg-[#d2758e]/10 hover:text-[#d2758e]"
+                            onClick={() => {
+                              window.location.href = `https://www.youtube.com/watch?v=${stream.videoId}`;
+                            }}
+                            data-testid={`button-watch-youtube-${stream.videoId}`}
+                            aria-label="Watch on youtube"
+                          >
+                            <FaYoutube className="h-5 w-5" />
+                            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-card px-2 py-1 font-retro text-[10px] uppercase tracking-wide text-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                              Watch on youtube
+                            </span>
+                          </Button>
+                        </td>
                       </tr>
                     ))
                   )}
