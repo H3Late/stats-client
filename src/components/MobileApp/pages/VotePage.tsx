@@ -46,7 +46,7 @@ function parsePositiveInteger(value: string): number {
   return Math.max(0, parsedValue);
 }
 
-function formatVoteGuess(diffSeconds: number): string {
+function formatVoteGuess(diffSeconds: number, rawScore = false): string {
   const formatLateTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.round((seconds % 60) * 10) / 10;
@@ -70,7 +70,8 @@ function formatVoteGuess(diffSeconds: number): string {
     return `${formatLateTime(Math.abs(diffSeconds))} early`;
   }
 
-  return `${formatLateTime(diffSeconds)} late`;
+
+  return rawScore === false ? `${formatLateTime(diffSeconds)} late` : `${formatLateTime(diffSeconds)}`;
 }
 
 function getReadableErrorMessage(error: unknown): string {
