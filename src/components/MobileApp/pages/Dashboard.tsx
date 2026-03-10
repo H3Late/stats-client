@@ -15,7 +15,8 @@ import { DayOfWeekChart } from "../components/DayOfWeekChart";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { Button } from "../components/ui/button";
-import { Clock, TrendingUp } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
+import { Clock, Info, TrendingUp } from "lucide-react";
 import { formatDurationVerbose, formatLateTime, formatTimeStatusDelta } from "../lib/utils";
 import Logo from "../../game/images/l3l3.png";
 
@@ -26,6 +27,7 @@ function getVoteStorageKey(videoId: string): string {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [hasVotedForLatest, setHasVotedForLatest] = useState(false);
+  const [isLateCalcInfoOpen, setIsLateCalcInfoOpen] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery<LivestreamStatsResponse>({
     queryKey: ['/api/livestream/stats'],
@@ -156,7 +158,7 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-3">
             <div className="hidden md:block font-retro text-sm text-muted-foreground" data-testid="text-last-updated">
               Last Updated: {lastUpdatedDate}
             </div>
@@ -168,6 +170,32 @@ export default function Dashboard() {
       {/* Main content with proper top padding to account for fixed header */}
       <main className="relative z-10 pt-20 pb-6">
         <div className="container mx-auto px-4 py-20 md:py-8 space-y-6">
+
+          <div className="w-full flex justify-end mt-2 md:mt-4">
+            <div className="flex items-center gap-2 text-right">
+              <p className="font-retro text-xs md:text-sm text-muted-foreground">How is late time calculated?</p>
+              <Tooltip open={isLateCalcInfoOpen} onOpenChange={setIsLateCalcInfoOpen}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="border border-primary/30 bg-card/60 text-primary hover:bg-primary/10 hover:text-primary"
+                    onClick={() => setIsLateCalcInfoOpen((previousState) => !previousState)}
+                    data-testid="button-late-time-info"
+                    aria-label="How is late time calculated?"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="end" className="max-w-[320px] font-retro text-xs leading-relaxed">
+                  Late time is calculated using the YouTube API to compare a stream&apos;s original scheduled start time to its actual start time. If the scheduled time changes later, the app keeps the original scheduled timestamp for the calculation. Streams that start within 10 seconds of the original scheduled time are counted as ON TIME.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <StatCard
               icon={Clock}
