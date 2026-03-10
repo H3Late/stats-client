@@ -6,7 +6,7 @@ const isMobile = () => window.matchMedia('(any-hover:none)').matches;
 const wantsDashboard = () => {
     const params = new URLSearchParams(window.location.search);
     const path = window.location.pathname;
-    return params.get('view') === 'data' || path.startsWith('/data');
+    return params.get('view') === 'data' || path.startsWith('/data') || path.startsWith('/dashboard') || path.startsWith('/vote');
 };
 
 (async () => {

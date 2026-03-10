@@ -84,6 +84,9 @@ export async function switchToDashboard(): Promise<void> {
     document.body.style.overflowX = 'hidden';
     document.body.style.overflowY = 'auto';
 
+    // Navigate to dashboard route
+    window.history.pushState(null, '', '/dashboard');
+
     const { renderMobileApp } = await import('../MobileApp/main');
     renderMobileApp();
 }
