@@ -276,9 +276,9 @@ export default function VotePage() {
         </div>
       </header>
 
-      {/* Main content with proper top padding to account for fixed header */}
-      <main className="relative z-10 pt-24 pb-8">
-        <div className="container mx-auto px-4 space-y-6">
+      {/* Main content with proper top/bottom padding to account for fixed header and mobile browser chrome */}
+      <main className="relative z-10 pt-24 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+        <div className="container mx-auto px-4 space-y-6 pt-4 md:pt-0">
           {/* Stream Info Card */}
           <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20 mt-20">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
