@@ -295,13 +295,12 @@ export default function LivestreamDataPage() {
                   <tr className="border-b border-border/60 bg-muted/20">
                     <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Video ID</th>
                     <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Title</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Scheduled</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Actual</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Delta</th>
+                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Scheduled Start</th>
+                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Actual Start </th>
+                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Difference</th>
                     <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Time Status</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Duration</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Watch</th>
+                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Stream Status</th>
+                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Stream Duration</th>
                   </tr>
                 </thead>
 
@@ -309,7 +308,7 @@ export default function LivestreamDataPage() {
                   {rows.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={8}
                         className="px-4 py-8 text-center font-retro text-muted-foreground"
                         data-testid="table-empty-state"
                       >
@@ -321,7 +320,24 @@ export default function LivestreamDataPage() {
                       <tr key={stream.videoId} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
                         <td className="px-4 py-3 font-retro text-sm text-foreground/80">{stream.videoId}</td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground max-w-[340px]">
-                          <div className="line-clamp-2">{stream.title}</div>
+                          <div className="flex items-start gap-2">
+                            <div className="line-clamp-2 flex-1 min-w-0">{stream.title}</div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="group relative h-7 w-7 shrink-0 text-[#7462B3] hover:bg-[#d2758e]/10 hover:text-[#d2758e]"
+                              onClick={() => {
+                                window.location.href = `https://www.youtube.com/watch?v=${stream.videoId}`;
+                              }}
+                              data-testid={`button-watch-youtube-${stream.videoId}`}
+                              aria-label="Watch on youtube"
+                            >
+                              <FaYoutube className="h-4 w-4" />
+                              <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-card px-2 py-1 font-retro text-[10px] uppercase tracking-wide text-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                                Watch on youtube
+                              </span>
+                            </Button>
+                          </div>
                         </td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDateTime(stream.scheduledStart)}</td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDateTime(stream.actualStart)}</td>
@@ -341,23 +357,6 @@ export default function LivestreamDataPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDuration(stream.totalDurationSeconds)}</td>
-                        <td className="px-4 py-3">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="group relative text-[#7462B3] hover:bg-[#d2758e]/10 hover:text-[#d2758e]"
-                            onClick={() => {
-                              window.location.href = `https://www.youtube.com/watch?v=${stream.videoId}`;
-                            }}
-                            data-testid={`button-watch-youtube-${stream.videoId}`}
-                            aria-label="Watch on youtube"
-                          >
-                            <FaYoutube className="h-5 w-5" />
-                            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-card px-2 py-1 font-retro text-[10px] uppercase tracking-wide text-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                              Watch on youtube
-                            </span>
-                          </Button>
-                        </td>
                       </tr>
                     ))
                   )}
