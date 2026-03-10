@@ -324,7 +324,7 @@ export default function VotePage() {
                 {hasVotedForLatest ? (
                   <div className="flex items-center gap-2 text-green-600">
                     <CheckCircle className="w-5 h-5" />
-                    <span className="font-retro">You have already voted for this stream! Check back here once the pod goes live to see results!</span>
+                    <span className="font-retro">Check back here once the pod goes live to see the results!</span>
                   </div>
                 ) : (
                   <div className="space-y-4">
