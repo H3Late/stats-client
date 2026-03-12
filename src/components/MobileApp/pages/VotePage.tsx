@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { ArrowLeft, CheckCircle, Clock, Vote } from "lucide-react";
+import { TbCrown } from "react-icons/tb";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
@@ -83,6 +84,22 @@ function getReadableErrorMessage(error: unknown): string {
   }
 
   return "Unable to complete request. Please try again.";
+}
+
+function buildLeaderboardEntryKey(entry: LeaderboardEntry): string {
+  return `${entry.userName}::${entry.userGuess}::${entry.proximityScore}`;
+}
+
+function getCrownClassName(rank: number): string {
+  if (rank === 1) {
+    return "text-amber-400";
+  }
+
+  if (rank === 2) {
+    return "text-slate-300";
+  }
+
+  return "text-orange-500";
 }
 
 export default function VotePage() {
@@ -182,8 +199,26 @@ export default function VotePage() {
     staleTime: 0,
   });
 
+  const { data: topThreeLeaderboardPage } = useQuery<PaginatedResponse<LeaderboardEntry>>({
+    queryKey: ["/api/vote/leaderboard/latest?page=0&size=3&sort=proximityScore,asc"],
+    enabled: canViewVoteResults,
+    staleTime: 30000,
+  });
+
   const leaderboardErrorMessage = leaderboardError ? getReadableErrorMessage(leaderboardError) : null;
   const leaderboardEntries = leaderboardPage?.content ?? [];
+  const topThreeEntries = topThreeLeaderboardPage?.content ?? [];
+  const topThreeRankMap = useMemo(() => {
+    const rankMap = new Map<string, number>();
+
+    topThreeEntries.forEach((entry, index) => {
+      rankMap.set(buildLeaderboardEntryKey(entry), index + 1);
+    });
+
+    return rankMap;
+  }, [topThreeEntries]);
+  const firstPlaceWinner = topThreeEntries[0]?.userName;
+  const firstPlaceGuess = topThreeEntries[0]?.userGuess;
   const latestActualResult = leaderboardEntries[0]?.actualResult;
 
   const handleSubmitVote = () => {
@@ -515,6 +550,16 @@ export default function VotePage() {
                     <h2 className="font-pixel text-xl text-secondary drop-shadow-[0_0_10px_rgba(236,72,153,0.5)]">
                       VOTE LEADERBOARD
                     </h2>
+                    {firstPlaceWinner && (
+                      <p className="font-retro text-md text-foreground mt-2 animate-bounce" data-testid="text-winner-announcement">
+                        Closest guess '{
+                          <span className="text-primary-400">{formatVoteGuess(firstPlaceGuess ?? 0)}</span>
+                        }' by
+                        <span className="text-amber-400">
+                          {" " + firstPlaceWinner}
+                        </span>
+                      </p>
+                    )}
                     {latestActualResult !== undefined && (
                       <p className="font-retro text-sm text-muted-foreground mt-2">
                         Actual Result: {formatVoteGuess(latestActualResult)}
@@ -556,14 +601,29 @@ export default function VotePage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {rows.map((entry, index) => (
-                            <tr key={`${entry.userName}-${index}`} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/70">{page * pageSize + index + 1}</td>
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 break-all">{entry.userName}</td>
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.userGuess)}</td>
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.proximityScore, true)}</td>
-                            </tr>
-                          ))}
+                          {rows.map((entry, index) => {
+                            const entryKey = buildLeaderboardEntryKey(entry);
+                            const topRank = topThreeRankMap.get(entryKey);
+
+                            return (
+                              <tr key={`${entry.userName}-${index}`} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/70">{page * pageSize + index + 1}</td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 break-all">
+                                  <span className="inline-flex items-center gap-2">
+                                    <span>{entry.userName}</span>
+                                      {topRank && (
+                                      <TbCrown
+                                        className={`w-4 h-4 ${getCrownClassName(topRank)}`}
+                                        aria-label={`Top ${topRank} ranking`}
+                                      />
+                                      )}
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.userGuess)}</td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.proximityScore, true)}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     )}
