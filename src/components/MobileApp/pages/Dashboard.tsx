@@ -52,6 +52,9 @@ export default function Dashboard() {
   const canViewVoteResults =
     mostRecentLivestream?.status === "LIVE" || mostRecentLivestream?.status === "ENDED";
 
+  const hasMostRecentLivestream = mostRecentLivestream !== null;
+  const canVoteFromDashboard = !hasMostRecentLivestream || isMostRecentScheduled;
+
   useEffect(() => {
     if (!latestVideoId) {
       setHasVotedForLatest(false);
@@ -67,15 +70,8 @@ export default function Dashboard() {
   }, [latestVideoId]);
 
   const handleMostRecentActionClick = () => {
-    if (isMostRecentScheduled) {
-      if (!hasVotedForLatest) {
-        setLocation('/vote');
-      }
-      return;
-    }
-
-    if (canViewVoteResults) {
-      setLocation('/vote');
+    if (canVoteFromDashboard || canViewVoteResults) {
+      setLocation("/vote");
     }
   };
 
@@ -115,19 +111,17 @@ export default function Dashboard() {
         : formatTimeStatusDelta(mostRecentLivestream.diffSeconds, mostRecentLivestream.timeStatus)
     : "No data";
 
-  const mostRecentDetail = mostRecentLivestream
-    ? mostRecentLivestream.status === "SCHEDULED"
-      ? "SCHEDULED • Voting Open"
-      : `${mostRecentLivestream.timeStatus} • ${mostRecentLivestream.status}`
-    : undefined;
+  const mostRecentDetail = !hasMostRecentLivestream
+  ? "Voting Open"
+  : mostRecentLivestream.status === "SCHEDULED"
+    ? "SCHEDULED • Voting Open"
+    : `${mostRecentLivestream.timeStatus} • ${mostRecentLivestream.status}`;
 
-  const mostRecentActionLabel = isMostRecentScheduled
-    ? hasVotedForLatest
-      ? "✓ Already voted"
-      : "Vote how late"
-    : canViewVoteResults
-      ? "View vote results"
-      : undefined;
+  const mostRecentActionLabel = canVoteFromDashboard
+  ? "Vote how late"
+  : canViewVoteResults
+    ? "View vote results"
+    : undefined;
 
   const mostRecentActionDisabled = isMostRecentScheduled ? hasVotedForLatest : false;
 

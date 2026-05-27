@@ -19,23 +19,20 @@ import { formatTimeStatusDelta } from "../lib/utils";
 import { apiRequest } from "../lib/queryClient";
 import Logo from "../../game/images/l3l3.png";
 
-interface VotePayload {
-  videoId: string;
+interface VotePayload { 
   diffSeconds: number;
   userName: string;
 }
 
 type SortField = "userGuess" | "proximityScore";
-type SortDirection = "asc" | "desc";
+type SortDirection = "asc" | "desc"; 
+
+const PENDING_VOTE_STORAGE_KEY = "vote:submitted:pending";
 
 function buildRandomUserName(): string {
   const randomSequence = Math.floor(100000 + Math.random() * 900000);
   return `FupaTroopa#${randomSequence}`;
-}
-
-function getVoteStorageKey(videoId: string): string {
-  return `vote:submitted:${videoId}`;
-}
+} 
 
 function parsePositiveInteger(value: string): number {
   const parsedValue = Number.parseInt(value, 10);
@@ -104,17 +101,16 @@ function getCrownClassName(rank: number): string {
 
 export default function VotePage() {
   const [, setLocation] = useLocation();
-
-  // Voting form state
+ 
   const [voteDirection, setVoteDirection] = useState<TimeStatus>("LATE");
   const [voteHours, setVoteHours] = useState("0");
   const [voteMinutes, setVoteMinutes] = useState("0");
   const [voteSeconds, setVoteSeconds] = useState("0");
   const [voteUserName, setVoteUserName] = useState(buildRandomUserName);
-  const [voteFormError, setVoteFormError] = useState<string | null>(null);
-  const [hasVotedForLatest, setHasVotedForLatest] = useState(false);
-
-  // Results table state  
+  const [voteFormError, setVoteFormError] = useState<string | null>(null); 
+ 
+  const [hasPendingVote, setHasPendingVote] = useState(false);  
+ 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>("proximityScore");
@@ -136,38 +132,55 @@ export default function VotePage() {
     queryKey: ['/api/livestream?size=1&sort=createdAt,desc'],
   });
 
-  const mostRecentLivestream = recentLivestreamPage?.content[0] ?? null;
-  const latestVideoId = mostRecentLivestream?.videoId ?? null;
+  const mostRecentLivestream = recentLivestreamPage?.content[0] ?? null; 
   const isMostRecentScheduled = mostRecentLivestream?.status === "SCHEDULED";
+
+  const voteSuccessMessage = isMostRecentScheduled 
+    ? "Vote saved for the upcoming livestream."
+    : "Vote saved for the next livestream.";
+
   const canViewVoteResults = mostRecentLivestream?.status === "LIVE" || mostRecentLivestream?.status === "ENDED";
 
+  // On initial load, check if user has a pending vote stored in localStorage. 
+  // This indicates they've submitted a vote for the latest stream but it hasn't been reflected in the leaderboard yet.
   useEffect(() => {
-    if (!latestVideoId) {
-      setHasVotedForLatest(false);
+    try {
+      setHasPendingVote(window.localStorage.getItem(PENDING_VOTE_STORAGE_KEY) === "true");
+    } catch {
+      setHasPendingVote(false); 
+    }
+    
+  }, []);
+  
+  // Clear pending vote state when user can view results, since that means their vote has been processed 
+  // and reflected in the leaderboard at this point.
+
+  useEffect(() => {
+    if(!canViewVoteResults) {
       return;
     }
 
     try {
-      const hasStoredVote = window.localStorage.getItem(getVoteStorageKey(latestVideoId)) === "true";
-      setHasVotedForLatest(hasStoredVote);
+      window.localStorage.removeItem(PENDING_VOTE_STORAGE_KEY);
     } catch {
-      setHasVotedForLatest(false);
+      // Ignore localStorage failures but still clear in-memory state
     }
-  }, [latestVideoId]);
+
+    setHasPendingVote(false); 
+  }, [canViewVoteResults]);
 
   const voteMutation = useMutation({
-    mutationFn: async (payload: VotePayload) => {
-      await apiRequest("POST", `/api/vote/${payload.videoId}`, payload);
+    mutationFn: async (payload: VotePayload) => { 
+      await apiRequest("POST", "/api/vote", payload);
     },
-    onSuccess: (_response, payload) => {
+    onSuccess: () => {
       try {
-        window.localStorage.setItem(getVoteStorageKey(payload.videoId), "true");
+        window.localStorage.setItem(PENDING_VOTE_STORAGE_KEY, "true"); 
       } catch {
         // Ignore localStorage failures and still honor in-memory state.
-      }
-
-      setHasVotedForLatest(true);
-      setVoteFormError(null);
+      } 
+      setHasPendingVote(true);
+      setVoteFormError(null); 
     },
     onError: (error) => {
       setVoteFormError(getReadableErrorMessage(error));
@@ -222,13 +235,8 @@ export default function VotePage() {
   const latestActualResult = leaderboardEntries[0]?.actualResult;
 
   const handleSubmitVote = () => {
-    if (!latestVideoId) {
-      setVoteFormError("No scheduled stream is available for voting.");
-      return;
-    }
-
-    if (hasVotedForLatest) {
-      setVoteFormError("You already voted for this stream.");
+    if (hasPendingVote) {
+      setVoteFormError("You already have a vote saved for the next livestream.");
       return;
     }
 
@@ -255,22 +263,33 @@ export default function VotePage() {
     }
 
     setVoteFormError(null);
-    voteMutation.mutate({
-      videoId: latestVideoId,
+    voteMutation.mutate({ 
       diffSeconds,
       userName: normalizedUserName,
     });
   };
 
-  if (recentLivestreamLoading || !mostRecentLivestream) {
+  if (recentLivestreamLoading) {
     return <LoadingScreen />;
   }
 
-  const mostRecentValue = mostRecentLivestream.status === "SCHEDULED"
-    ? "SCHEDULED"
-    : mostRecentLivestream.timeStatus === "ON_TIME"
-      ? "ON TIME!"
-      : formatTimeStatusDelta(mostRecentLivestream.diffSeconds, mostRecentLivestream.timeStatus);
+  const hasMostRecentLivestream = mostRecentLivestream !== null;
+
+  const mostRecentValue = !hasMostRecentLivestream
+    ? "NO STREAM DATA"
+    : mostRecentLivestream.status === "SCHEDULED"
+      ? "SCHEDULED"
+      : mostRecentLivestream.timeStatus === "ON_TIME"
+        ? "ON TIME!"
+        : formatTimeStatusDelta(mostRecentLivestream.diffSeconds, mostRecentLivestream.timeStatus);
+
+  const mostRecentTitle = mostRecentLivestream?.title ?? "No livestream has been tracked yet.";
+
+  const mostRecentStatusText = !hasMostRecentLivestream
+    ? "Voting Open"
+    : mostRecentLivestream.status === "SCHEDULED"
+      ? "SCHEDULED • Voting Open"
+      : `${mostRecentLivestream.timeStatus} • ${mostRecentLivestream.status}`;
 
   const rows = leaderboardEntries;
   const currentPage = (leaderboardPage?.number ?? page) + 1;
@@ -303,7 +322,7 @@ export default function VotePage() {
 
             <div className="min-w-0">
               <h1 className="font-pixel text-lg md:text-2xl text-primary truncate drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" data-testid="heading-vote-page">
-                {isMostRecentScheduled ? "VOTE" : "VOTE RESULTS"}
+                {!mostRecentLivestream || isMostRecentScheduled ? "VOTE" : "VOTE RESULTS"}
               </h1>
             </div>
           </div>
@@ -330,143 +349,148 @@ export default function VotePage() {
                     {mostRecentValue}
                   </div>
                   <div className="font-retro text-base text-foreground/90 line-clamp-2">
-                    {mostRecentLivestream.title}
+                    {mostRecentTitle}
                   </div>
                   <div className="font-retro text-sm text-muted-foreground">
-                    {mostRecentLivestream.status === "SCHEDULED" 
-                      ? "SCHEDULED • Voting Open" 
-                      : `${mostRecentLivestream.timeStatus} • ${mostRecentLivestream.status}`}
+                    {mostRecentStatusText}
                   </div>
                 </div>
               </div>
             </div>
           </Card>
 
-          {/* Voting Form (if SCHEDULED) */}
-          {isMostRecentScheduled && (
-            <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-              
-              <div className="relative z-10 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-md bg-primary/20 border border-primary/40">
-                    <Vote className="w-6 h-6 text-primary" strokeWidth={2.5} />
-                  </div>
-                  <h2 className="font-pixel text-xl text-primary">
-                    {hasVotedForLatest ? "VOTE SUBMITTED" : "SUBMIT YOUR PREDICTION"}
-                  </h2>
+          {/* Voting Form (if SCHEDULED) 
+          [Removed UI Gating around the form]*/}
+          <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-primary/20 border border-primary/40">
+                  <Vote className="w-6 h-6 text-primary" strokeWidth={2.5} />
                 </div>
+                <h2 className="font-pixel text-xl text-primary">
+                  {hasPendingVote ? "VOTE SUBMITTED" : "SUBMIT YOUR PREDICTION"}
+                </h2>
+              </div>
 
-                {hasVotedForLatest ? (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-retro">Check back here once the pod goes live to see the results!</span>
+              {hasPendingVote ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-retro">{voteSuccessMessage}</span>
+                    </div>
+                    <p className="font-retro text-sm text-muted-foreground">
+                      Check back here once the pod goes live to see the results!
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vote-username" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
+                      Username
+                    </Label>
+                    <Input
+                      id="vote-username"
+                      value={voteUserName}
+                      onChange={(event) => setVoteUserName(event.target.value)}
+                      className="font-retro"
+                      placeholder="FupaTroopa#123456"
+                      data-testid="input-vote-username"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vote-direction" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
+                      Prediction Type
+                    </Label>
+                    <select
+                      id="vote-direction"
+                      value={voteDirection}
+                      onChange={(event) => setVoteDirection(event.target.value as TimeStatus)}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
+                      data-testid="select-vote-direction"
+                    >
+                      <option value="LATE">LATE</option>
+                      <option value="EARLY">EARLY</option>
+                      <option value="ON_TIME">ON_TIME</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="vote-username" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                        Username
+                      <Label htmlFor="vote-hours" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
+                        Hours
                       </Label>
                       <Input
-                        id="vote-username"
-                        value={voteUserName}
-                        onChange={(event) => setVoteUserName(event.target.value)}
+                        id="vote-hours"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={voteHours}
+                        onChange={(event) => setVoteHours(event.target.value)}
+                        disabled={voteDirection === "ON_TIME"}
                         className="font-retro"
-                        placeholder="FupaTroopa#123456"
-                        data-testid="input-vote-username"
+                        data-testid="input-vote-hours"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="vote-direction" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                        Prediction Type
+                      <Label htmlFor="vote-minutes" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
+                        Minutes
                       </Label>
-                      <select
-                        id="vote-direction"
-                        value={voteDirection}
-                        onChange={(event) => setVoteDirection(event.target.value as TimeStatus)}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                        data-testid="select-vote-direction"
-                      >
-                        <option value="LATE">LATE</option>
-                        <option value="EARLY">EARLY</option>
-                        <option value="ON_TIME">ON_TIME</option>
-                      </select>
+                      <Input
+                        id="vote-minutes"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={voteMinutes}
+                        onChange={(event) => setVoteMinutes(event.target.value)}
+                        disabled={voteDirection === "ON_TIME"}
+                        className="font-retro"
+                        data-testid="input-vote-minutes"
+                      />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="vote-hours" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                          Hours
-                        </Label>
-                        <Input
-                          id="vote-hours"
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={voteHours}
-                          onChange={(event) => setVoteHours(event.target.value)}
-                          disabled={voteDirection === "ON_TIME"}
-                          className="font-retro"
-                          data-testid="input-vote-hours"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="vote-minutes" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                          Minutes
-                        </Label>
-                        <Input
-                          id="vote-minutes"
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={voteMinutes}
-                          onChange={(event) => setVoteMinutes(event.target.value)}
-                          disabled={voteDirection === "ON_TIME"}
-                          className="font-retro"
-                          data-testid="input-vote-minutes"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="vote-seconds" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                          Seconds
-                        </Label>
-                        <Input
-                          id="vote-seconds"
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={voteSeconds}
-                          onChange={(event) => setVoteSeconds(event.target.value)}
-                          disabled={voteDirection === "ON_TIME"}
-                          className="font-retro"
-                          data-testid="input-vote-seconds"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="vote-seconds" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
+                        Seconds
+                      </Label>
+                      <Input
+                        id="vote-seconds"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={voteSeconds}
+                        onChange={(event) => setVoteSeconds(event.target.value)}
+                        disabled={voteDirection === "ON_TIME"}
+                        className="font-retro"
+                        data-testid="input-vote-seconds"
+                      />
                     </div>
-
-                    {voteFormError && (
-                      <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 font-retro text-sm text-destructive" data-testid="text-vote-error">
-                        {voteFormError}
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handleSubmitVote}
-                      disabled={voteMutation.isPending}
-                      className="w-full font-retro uppercase tracking-wide"
-                      data-testid="button-submit-vote"
+                  </div> 
+                  
+                  {voteFormError && (
+                    <div
+                      className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 font-retro text-sm text-destructive"
+                      data-testid="text-vote-error"
                     >
-                      {voteMutation.isPending ? "Submitting..." : "Submit Vote"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
+                      {voteFormError}
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleSubmitVote}
+                    disabled={voteMutation.isPending}
+                    className="w-full font-retro uppercase tracking-wide"
+                    data-testid="button-submit-vote"
+                  >
+                    {voteMutation.isPending ? "Submitting..." : "Submit Vote"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
 
           {/* Vote Results (if not SCHEDULED) */}
           {canViewVoteResults && (
