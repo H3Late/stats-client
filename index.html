@@ -2,7 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Tomato Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>L3L3 Late Tracker</title>
+    <meta name="description" content="Track H3H3's lateness stats and play the L3L3 game." />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
+
+    <!-- iOS home screen icon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+
+    <!-- Android / PWA manifest -->
+    <link rel="manifest" href="/images/site.webmanifest" />
+    <meta name="theme-color" content="#202020" />
+
+    <!-- Google / Open Graph search result card -->
+    <meta property="og:title" content="L3L3 Late Tracker" />
+    <meta property="og:description" content="Track H3H3's lateness stats and play the L3L3 game." />
+    <meta property="og:image" content="/images/android-chrome-512x512.png" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Retro Gaming Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    
     <style>
 
       @font-face {
@@ -29,10 +55,21 @@
         top: 50%;
         transform: translate(-50%, -50%);
       }
+      
+      /* React app container for mobile */
+      #root {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
     </style>
     <link rel="preload" href="/fonts/SHPinscher-Regular.woff2" as="font" type="font/woff2" crossorigin>
   </head>
   <body>
+    <div id="root"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

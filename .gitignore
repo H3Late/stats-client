@@ -6,7 +6,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+vite.config.ts*
 
+server/public
 node_modules
 dist
 dist-ssr
@@ -22,7 +24,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
+*.tar.gz
 local-notes.txt
 
 .env

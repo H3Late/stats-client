@@ -1,4 +1,4 @@
-import { ErrorHandler, ErrorType } from '../../../utils/ErrorHandler';
+import { ErrorHandler, ErrorType } from '../utils/ErrorHandler';
 
 const keyMap: Record<string, keyof Controller['keys']> = {
   Space: 'space',

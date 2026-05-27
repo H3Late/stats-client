@@ -1,7 +1,7 @@
 import { Graphics, Container, TextStyle, Text, Sprite } from 'pixi.js';
 import type { PositionVector } from './systems/Vector';
-import { NetworkManager } from '../../managers/NetworkManager';
-import lerp from '../../utils/utils';
+import { NetworkManager } from './managers/NetworkManager';
+import lerp from './utils/utils';
 
 export interface EnemyPosition extends PositionVector {
     timestamp: number;
@@ -223,8 +223,6 @@ export class EnemyPlayer extends Container {
     // TODO: fix issue where dead enemies are not removed from the stage...
     // when they are dead, this function is called repeatedly
       if (this.isAlive === false) return; // Already dead
-      console.log('killing enemy player', this.id);
-
       this.isAlive = false;
       if (this.parent) {
           this.parent.removeChild(this);
@@ -264,8 +262,6 @@ export class EnemyPlayer extends Container {
       this.x = spawnX;
       this.y = spawnY;
       this.isAlive = true;
-
-      console.log('respawning enemy player at ', spawnX, spawnY);
       
       // Initialize position buffer with spawn position to prevent interpolation from old positions
       const currentTime = performance.now() + NetworkManager.getInstance().getServerTimeOffset();
@@ -300,7 +296,6 @@ export class EnemyPlayer extends Container {
     this.invulnerabilityStartTime = Date.now();
     this.body.clear();
     this.body.rect(0, 0, 50, 50).fill('#FFD700'); // Golden color
-    console.log(`EnemyPlayer ${this.playerName} started invulnerability for ${EnemyPlayer.INVULNERABILITY_DURATION_MS}ms`);
     
     // Auto-end invulnerability after duration
     setTimeout(() => {
@@ -359,7 +354,6 @@ export class EnemyPlayer extends Container {
       this.flashInterval = undefined;
     }
     
-    console.log(`EnemyPlayer ${this.playerName} ended invulnerability`);
   }
 
   public getIsInvulnerable(): boolean {

@@ -1,7 +1,7 @@
 import { Graphics, Container, Text, TextStyle, Sprite } from 'pixi.js';
 import { Platform } from './Platform';
 import { type PositionVector, type InputVector } from './systems/Vector';
-import { AudioManager } from '../../managers/AudioManager';
+import { AudioManager } from './managers/AudioManager';
 
 export interface PendingInput {
   seq: number; 
@@ -199,9 +199,6 @@ export class Player extends Container {
 
   
 
-  private isJumping = false;
-  private indexPostJump = 0
-
 
   update(inputVector: InputVector, dt: number): void {
 
@@ -236,10 +233,6 @@ export class Player extends Container {
           this.resetJumpState();
       }
 
-      if (this.isJumping && inputVector.y === 0 && inputVector.x === 0) {
-        this.indexPostJump++;
-        //console.log(`${isResimulating ? 'RES: ' : ''}Player coordinates ${this.indexPostJump} ticks after jump: ${this.x}, ${this.y}. Vy=${this.velocity.y}. local tick: ${localTick}`);
-      }
 
       // Check platform collisions
       const { isOnPlatform, platformTop } = this.checkPlatformCollisions();            
@@ -265,8 +258,6 @@ export class Player extends Container {
   private resetJumpState(): void {
       this.canDoubleJump = true;
       this.velocity.y = 0;
-      this.isJumping = false;
-      this.indexPostJump = 0;
       this.isOnSurface = true;
   }
 
@@ -281,7 +272,6 @@ export class Player extends Container {
         this.velocity.y = inputVector.y * this.JUMP_STRENGTH;
         this.canDoubleJump = true; // Enable double jump
         this.isOnSurface = false;
-        this.isJumping = true;
         AudioManager.getInstance().play('jump');
     } else if (this.canDoubleJump) {
         // Double jump in air
@@ -339,7 +329,6 @@ export class Player extends Container {
       // NOTE: this will likely break if health regen is introduced
   
       if (updatedServerHealth < this.predictedHealth) {
-        console.log(`Setting predictedHealth to serverHealth: ${this.serverHealth} in setHealth()`);
           this.predictedHealth = updatedServerHealth;
       }
       this.updateHealthBar();
@@ -356,7 +345,6 @@ export class Player extends Container {
   damage(amount: number = 10) {
     
     if (this.isBystander) return; // Do not apply damage to bystanders
-    console.log(`Setting predictedHealth to ${Math.max(0, this.predictedHealth - amount)} in damage()`);
     this.predictedHealth = Math.max(0, this.predictedHealth - amount);
     this.updateHealthBar();
 
