@@ -1,16 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
-import { ArrowLeft, CheckCircle, Clock, Vote } from "lucide-react";
-import { TbCrown } from "react-icons/tb";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
+import { ArrowLeft, Clock } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
+import { CastVote } from "../components/CastVote";
+import { VoteResults } from "../components/VoteResults";
 import type {
-  LeaderboardEntry,
   LivestreamRecord,
   PaginatedResponse,
   TimeStatus,
@@ -19,220 +17,109 @@ import { formatTimeStatusDelta } from "../lib/utils";
 import { apiRequest } from "../lib/queryClient";
 import Logo from "../../game/images/l3l3.png";
 
-interface VotePayload { 
+interface VotePayload {
   diffSeconds: number;
   userName: string;
 }
-
-type SortField = "userGuess" | "proximityScore";
-type SortDirection = "asc" | "desc"; 
 
 const PENDING_VOTE_STORAGE_KEY = "vote:submitted:pending";
 
 function buildRandomUserName(): string {
   const randomSequence = Math.floor(100000 + Math.random() * 900000);
   return `FupaTroopa#${randomSequence}`;
-} 
+}
 
 function parsePositiveInteger(value: string): number {
   const parsedValue = Number.parseInt(value, 10);
-
-  if (!Number.isFinite(parsedValue) || Number.isNaN(parsedValue)) {
-    return 0;
-  }
-
+  if (!Number.isFinite(parsedValue) || Number.isNaN(parsedValue)) return 0;
   return Math.max(0, parsedValue);
-}
-
-function formatVoteGuess(diffSeconds: number, rawScore = false): string {
-  const formatLateTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.round((seconds % 60) * 10) / 10;
-    
-    if (minutes === 0) {
-      return `${remainingSeconds}s`;
-    }
-    
-    if (remainingSeconds === 0) {
-      return `${minutes}m`;
-    }
-    
-    return `${minutes}m ${remainingSeconds}s`;
-  };
-
-  if (diffSeconds === 0) {
-    return "ON TIME";
-  }
-
-  if (diffSeconds < 0) {
-    return `${formatLateTime(Math.abs(diffSeconds))} early`;
-  }
-
-
-  return rawScore === false ? `${formatLateTime(diffSeconds)} late` : `${formatLateTime(diffSeconds)}`;
 }
 
 function getReadableErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const splitMessage = error.message.split(":");
     const messageWithoutStatus = splitMessage.slice(1).join(":").trim();
-
     return messageWithoutStatus.length > 0 ? messageWithoutStatus : error.message;
   }
-
   return "Unable to complete request. Please try again.";
 }
 
-function buildLeaderboardEntryKey(entry: LeaderboardEntry): string {
-  return `${entry.userName}::${entry.userGuess}::${entry.proximityScore}`;
-}
-
-function getCrownClassName(rank: number): string {
-  if (rank === 1) {
-    return "text-amber-400";
-  }
-
-  if (rank === 2) {
-    return "text-slate-300";
-  }
-
-  return "text-orange-500";
-}
+type ActiveTab = "cast" | "results";
 
 export default function VotePage() {
   const [, setLocation] = useLocation();
- 
+  const search = useSearch();
+  const initialTab: ActiveTab = new URLSearchParams(search).get("tab") === "results" ? "results" : "cast";
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
+
   const [voteDirection, setVoteDirection] = useState<TimeStatus>("LATE");
   const [voteHours, setVoteHours] = useState("0");
   const [voteMinutes, setVoteMinutes] = useState("0");
   const [voteSeconds, setVoteSeconds] = useState("0");
   const [voteUserName, setVoteUserName] = useState(buildRandomUserName);
-  const [voteFormError, setVoteFormError] = useState<string | null>(null); 
- 
-  const [hasPendingVote, setHasPendingVote] = useState(false);  
- 
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortField, setSortField] = useState<SortField>("proximityScore");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [voteFormError, setVoteFormError] = useState<string | null>(null);
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-      setPage(0); // Reset to first page when search changes
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  const [hasPendingVote, setHasPendingVote] = useState(false);
 
   const { data: recentLivestreamPage, isLoading: recentLivestreamLoading } = useQuery<PaginatedResponse<LivestreamRecord>>({
     queryKey: ['/api/livestream?size=1&sort=createdAt,desc'],
   });
 
-  const mostRecentLivestream = recentLivestreamPage?.content[0] ?? null; 
+  const mostRecentLivestream = recentLivestreamPage?.content[0] ?? null;
   const isMostRecentScheduled = mostRecentLivestream?.status === "SCHEDULED";
+  const canViewVoteResults = mostRecentLivestream?.status === "LIVE" || mostRecentLivestream?.status === "ENDED";
 
-  const voteSuccessMessage = isMostRecentScheduled 
+  const voteSuccessMessage = isMostRecentScheduled
     ? "Vote saved for the upcoming livestream."
     : "Vote saved for the next livestream.";
 
-  const canViewVoteResults = mostRecentLivestream?.status === "LIVE" || mostRecentLivestream?.status === "ENDED";
-
-  // On initial load, check if user has a pending vote stored in localStorage. 
-  // This indicates they've submitted a vote for the latest stream but it hasn't been reflected in the leaderboard yet.
   useEffect(() => {
     try {
-      setHasPendingVote(window.localStorage.getItem(PENDING_VOTE_STORAGE_KEY) === "true");
+      setHasPendingVote(window.localStorage.getItem(PENDING_VOTE_STORAGE_KEY) !== null);
     } catch {
-      setHasPendingVote(false); 
+      setHasPendingVote(false);
     }
-    
   }, []);
-  
-  // Clear pending vote state when user can view results, since that means their vote has been processed 
-  // and reflected in the leaderboard at this point.
 
+  // Clear pending vote only when a stream that started AFTER the vote submission goes LIVE/ENDED.
+  // Without the timestamp check, any already-ENDED stream would clear the flag on every mount.
   useEffect(() => {
-    if(!canViewVoteResults) {
-      return;
-    }
+    if (!canViewVoteResults || !mostRecentLivestream) return;
 
     try {
-      window.localStorage.removeItem(PENDING_VOTE_STORAGE_KEY);
-    } catch {
-      // Ignore localStorage failures but still clear in-memory state
-    }
+      const submittedAt = Number(window.localStorage.getItem(PENDING_VOTE_STORAGE_KEY));
+      if (!submittedAt) return;
 
-    setHasPendingVote(false); 
-  }, [canViewVoteResults]);
+      const streamStartedAt = mostRecentLivestream.actualStart
+        ? new Date(mostRecentLivestream.actualStart).getTime()
+        : new Date(mostRecentLivestream.createdAt).getTime();
+
+      if (streamStartedAt > submittedAt) {
+        window.localStorage.removeItem(PENDING_VOTE_STORAGE_KEY);
+        setHasPendingVote(false);
+      }
+    } catch {
+      // ignore
+    }
+  }, [canViewVoteResults, mostRecentLivestream]);
 
   const voteMutation = useMutation({
-    mutationFn: async (payload: VotePayload) => { 
+    mutationFn: async (payload: VotePayload) => {
       await apiRequest("POST", "/api/vote", payload);
     },
     onSuccess: () => {
       try {
-        window.localStorage.setItem(PENDING_VOTE_STORAGE_KEY, "true"); 
+        window.localStorage.setItem(PENDING_VOTE_STORAGE_KEY, Date.now().toString());
       } catch {
-        // Ignore localStorage failures and still honor in-memory state.
-      } 
+        // ignore
+      }
       setHasPendingVote(true);
-      setVoteFormError(null); 
+      setVoteFormError(null);
     },
     onError: (error) => {
       setVoteFormError(getReadableErrorMessage(error));
     },
   });
-
-  const leaderboardQueryPath = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("size", String(pageSize));
-    params.set("sort", `${sortField},${sortDirection}`);
-
-    if (debouncedSearch.trim()) {
-      params.set("search", debouncedSearch.trim());
-    }
-
-    return `/api/vote/leaderboard/latest?${params.toString()}`;
-  }, [page, pageSize, sortField, sortDirection, debouncedSearch]);
-
-  const {
-    data: leaderboardPage,
-    isPending: leaderboardPending,
-    isFetching: leaderboardFetching,
-    error: leaderboardError,
-  } = useQuery<PaginatedResponse<LeaderboardEntry>>({
-    queryKey: [leaderboardQueryPath],
-    enabled: canViewVoteResults,
-    placeholderData: keepPreviousData,
-    staleTime: 0,
-  });
-
-  const { data: topThreeLeaderboardPage } = useQuery<PaginatedResponse<LeaderboardEntry>>({
-    queryKey: ["/api/vote/leaderboard/latest?page=0&size=3&sort=proximityScore,asc"],
-    enabled: canViewVoteResults,
-    staleTime: 30000,
-  });
-
-  const leaderboardErrorMessage = leaderboardError ? getReadableErrorMessage(leaderboardError) : null;
-  const leaderboardEntries = leaderboardPage?.content ?? [];
-  const topThreeEntries = topThreeLeaderboardPage?.content ?? [];
-  const topThreeRankMap = useMemo(() => {
-    const rankMap = new Map<string, number>();
-
-    topThreeEntries.forEach((entry, index) => {
-      rankMap.set(buildLeaderboardEntryKey(entry), index + 1);
-    });
-
-    return rankMap;
-  }, [topThreeEntries]);
-  const firstPlaceWinner = topThreeEntries[0]?.userName;
-  const firstPlaceGuess = topThreeEntries[0]?.userGuess;
-  const latestActualResult = leaderboardEntries[0]?.actualResult;
 
   const handleSubmitVote = () => {
     if (hasPendingVote) {
@@ -241,7 +128,6 @@ export default function VotePage() {
     }
 
     const normalizedUserName = voteUserName.trim();
-
     if (!normalizedUserName) {
       setVoteFormError("Please enter a username before submitting your vote.");
       return;
@@ -253,20 +139,11 @@ export default function VotePage() {
     const totalSeconds = (hoursValue * 3600) + (minutesValue * 60) + secondsValue;
 
     let diffSeconds = 0;
-
-    if (voteDirection === "EARLY") {
-      diffSeconds = -totalSeconds;
-    }
-
-    if (voteDirection === "LATE") {
-      diffSeconds = totalSeconds;
-    }
+    if (voteDirection === "EARLY") diffSeconds = -totalSeconds;
+    if (voteDirection === "LATE") diffSeconds = totalSeconds;
 
     setVoteFormError(null);
-    voteMutation.mutate({ 
-      diffSeconds,
-      userName: normalizedUserName,
-    });
+    voteMutation.mutate({ diffSeconds, userName: normalizedUserName });
   };
 
   if (recentLivestreamLoading) {
@@ -291,16 +168,11 @@ export default function VotePage() {
       ? "SCHEDULED • Voting Open"
       : `${mostRecentLivestream.timeStatus} • ${mostRecentLivestream.status}`;
 
-  const rows = leaderboardEntries;
-  const currentPage = (leaderboardPage?.number ?? page) + 1;
-  const totalPages = Math.max(leaderboardPage?.totalPages ?? 1, 1);
-  const totalElements = leaderboardPage?.totalElements ?? 0;
-
   return (
     <div className="min-h-screen bg-background relative">
       {/* Background patterns */}
       <div className="fixed inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-[0.15] pointer-events-none z-0" />
-      
+
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none z-0">
         <div className="w-full h-1 bg-foreground/50 animate-scanline" />
       </div>
@@ -322,7 +194,7 @@ export default function VotePage() {
 
             <div className="min-w-0">
               <h1 className="font-pixel text-lg md:text-2xl text-primary truncate drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" data-testid="heading-vote-page">
-                {!mostRecentLivestream || isMostRecentScheduled ? "VOTE" : "VOTE RESULTS"}
+                VOTE
               </h1>
             </div>
           </div>
@@ -331,13 +203,13 @@ export default function VotePage() {
         </div>
       </header>
 
-      {/* Main content with proper top/bottom padding to account for fixed header and mobile browser chrome */}
+      {/* Main content */}
       <main className="relative z-10 pt-24 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
         <div className="container mx-auto px-4 space-y-6 pt-4 md:pt-0">
           {/* Stream Info Card */}
           <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20 mt-20">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-            
+
             <div className="relative z-10 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-md bg-primary/20 border border-primary/40">
@@ -359,336 +231,48 @@ export default function VotePage() {
             </div>
           </Card>
 
-          {/* Voting Form (if SCHEDULED) 
-          [Removed UI Gating around the form]*/}
-          <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-            
-            <div className="relative z-10 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-md bg-primary/20 border border-primary/40">
-                  <Vote className="w-6 h-6 text-primary" strokeWidth={2.5} />
-                </div>
-                <h2 className="font-pixel text-xl text-primary">
-                  {hasPendingVote ? "VOTE SUBMITTED" : "SUBMIT YOUR PREDICTION"}
-                </h2>
-              </div>
+          {/* Tab Switcher */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant={activeTab === "cast" ? "default" : "outline"}
+              onClick={() => setActiveTab("cast")}
+              className="font-retro uppercase tracking-wide"
+              data-testid="tab-cast-vote"
+            >
+              Cast Vote
+            </Button>
+            <Button
+              variant={activeTab === "results" ? "default" : "outline"}
+              onClick={() => setActiveTab("results")}
+              className="font-retro uppercase tracking-wide"
+              data-testid="tab-vote-results"
+            >
+              Previous Results
+            </Button>
+          </div>
 
-              {hasPendingVote ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-retro">{voteSuccessMessage}</span>
-                    </div>
-                    <p className="font-retro text-sm text-muted-foreground">
-                      Check back here once the pod goes live to see the results!
-                    </p>
-                  </div>
-                ) : (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vote-username" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                      Username
-                    </Label>
-                    <Input
-                      id="vote-username"
-                      value={voteUserName}
-                      onChange={(event) => setVoteUserName(event.target.value)}
-                      className="font-retro"
-                      placeholder="FupaTroopa#123456"
-                      data-testid="input-vote-username"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="vote-direction" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                      Prediction Type
-                    </Label>
-                    <select
-                      id="vote-direction"
-                      value={voteDirection}
-                      onChange={(event) => setVoteDirection(event.target.value as TimeStatus)}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                      data-testid="select-vote-direction"
-                    >
-                      <option value="LATE">LATE</option>
-                      <option value="EARLY">EARLY</option>
-                      <option value="ON_TIME">ON_TIME</option>
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="vote-hours" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                        Hours
-                      </Label>
-                      <Input
-                        id="vote-hours"
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={voteHours}
-                        onChange={(event) => setVoteHours(event.target.value)}
-                        disabled={voteDirection === "ON_TIME"}
-                        className="font-retro"
-                        data-testid="input-vote-hours"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="vote-minutes" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                        Minutes
-                      </Label>
-                      <Input
-                        id="vote-minutes"
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={voteMinutes}
-                        onChange={(event) => setVoteMinutes(event.target.value)}
-                        disabled={voteDirection === "ON_TIME"}
-                        className="font-retro"
-                        data-testid="input-vote-minutes"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="vote-seconds" className="font-retro text-xs uppercase tracking-wide text-muted-foreground">
-                        Seconds
-                      </Label>
-                      <Input
-                        id="vote-seconds"
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={voteSeconds}
-                        onChange={(event) => setVoteSeconds(event.target.value)}
-                        disabled={voteDirection === "ON_TIME"}
-                        className="font-retro"
-                        data-testid="input-vote-seconds"
-                      />
-                    </div>
-                  </div> 
-                  
-                  {voteFormError && (
-                    <div
-                      className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 font-retro text-sm text-destructive"
-                      data-testid="text-vote-error"
-                    >
-                      {voteFormError}
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleSubmitVote}
-                    disabled={voteMutation.isPending}
-                    className="w-full font-retro uppercase tracking-wide"
-                    data-testid="button-submit-vote"
-                  >
-                    {voteMutation.isPending ? "Submitting..." : "Submit Vote"}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Vote Results (if not SCHEDULED) */}
-          {canViewVoteResults && (
-            <>
-              {/* Filters Card */}
-              <Card className="relative overflow-hidden border-2 border-secondary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-secondary/20">
-                <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent pointer-events-none" />
-
-                <div className="relative z-10 space-y-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Search by Username</span>
-                    <Input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Type to search usernames..."
-                      className="font-retro"
-                      data-testid="input-search-username"
-                    />
-                  </label>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <label className="flex flex-col gap-1">
-                      <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Sort By</span>
-                      <select
-                        value={sortField}
-                        onChange={(event) => {
-                          setSortField(event.target.value as SortField);
-                          setPage(0);
-                        }}
-                        className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                        data-testid="select-sort-field"
-                      >
-                        <option value="proximityScore">Off By (Proximity)</option>
-                        <option value="userGuess">Guess Value</option>
-                      </select>
-                    </label>
-
-                    <label className="flex flex-col gap-1">
-                      <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Direction</span>
-                      <select
-                        value={sortDirection}
-                        onChange={(event) => {
-                          setSortDirection(event.target.value as SortDirection);
-                          setPage(0);
-                        }}
-                        className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                        data-testid="select-sort-direction"
-                      >
-                        <option value="asc">ASC</option>
-                        <option value="desc">DESC</option>
-                      </select>
-                    </label>
-
-                    <label className="flex flex-col gap-1">
-                      <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Page Size</span>
-                      <select
-                        value={pageSize}
-                        onChange={(event) => {
-                          setPageSize(Number(event.target.value));
-                          setPage(0);
-                        }}
-                        className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                        data-testid="select-page-size"
-                      >
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                      </select>
-                    </label>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Results Table */}
-              <Card className="relative overflow-hidden border-2 border-secondary/40 bg-card/95 backdrop-blur-sm p-0 shadow-lg shadow-secondary/20">
-                <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent pointer-events-none" />
-
-                <div className="relative z-10">
-                  <div className="p-4 md:p-6 border-b border-border/40">
-                    <h2 className="font-pixel text-xl text-secondary drop-shadow-[0_0_10px_rgba(236,72,153,0.5)]">
-                      VOTE LEADERBOARD
-                    </h2>
-                    {firstPlaceWinner && (
-                      <p className="font-retro text-md text-foreground mt-2 animate-bounce" data-testid="text-winner-announcement">
-                        Closest guess '{
-                          <span className="text-primary-400">{formatVoteGuess(firstPlaceGuess ?? 0)}</span>
-                        }' by
-                        <span className="text-amber-400">
-                          {" " + firstPlaceWinner}
-                        </span>
-                      </p>
-                    )}
-                    {latestActualResult !== undefined && (
-                      <p className="font-retro text-sm text-muted-foreground mt-2">
-                        Actual Result: {formatVoteGuess(latestActualResult)}
-                      </p>
-                    )}
-                  </div>
-
-                  {leaderboardFetching && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-card/70 backdrop-blur-[1px]">
-                      <div className="font-retro text-sm text-muted-foreground animate-pulse" data-testid="table-loading-overlay">
-                        Loading vote results...
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="overflow-x-auto">
-                    {leaderboardPending && !leaderboardPage ? (
-                      <div className="p-8 text-center font-retro text-sm text-muted-foreground">
-                        Loading vote results...
-                      </div>
-                    ) : leaderboardErrorMessage ? (
-                      <div className="p-8 text-center">
-                        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 font-retro text-sm text-destructive">
-                          {leaderboardErrorMessage}
-                        </div>
-                      </div>
-                    ) : rows.length === 0 ? (
-                      <div className="p-8 text-center font-retro text-sm text-muted-foreground">
-                        No vote results found.
-                      </div>
-                    ) : (
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b border-border/60 bg-muted/20">
-                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-retro text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">#</th>
-                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-retro text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">Username</th>
-                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-retro text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">Guess</th>
-                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-retro text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">Off By</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows.map((entry, index) => {
-                            const entryKey = buildLeaderboardEntryKey(entry);
-                            const topRank = topThreeRankMap.get(entryKey);
-
-                            return (
-                              <tr key={`${entry.userName}-${index}`} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
-                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/70">{page * pageSize + index + 1}</td>
-                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 break-all">
-                                  <span className="inline-flex items-center gap-2">
-                                    <span>{entry.userName}</span>
-                                      {topRank && (
-                                      <TbCrown
-                                        className={`w-4 h-4 ${getCrownClassName(topRank)}`}
-                                        aria-label={`Top ${topRank} ranking`}
-                                      />
-                                      )}
-                                  </span>
-                                </td>
-                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.userGuess)}</td>
-                                <td className="px-2 sm:px-4 py-2 sm:py-3 font-retro text-xs sm:text-sm text-foreground/90 whitespace-nowrap">{formatVoteGuess(entry.proximityScore, true)}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-              </Card>
-
-              {/* Pagination */}
-              {rows.length > 0 && (
-                <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-                  <p className="font-retro text-sm text-muted-foreground" data-testid="text-table-summary">
-                    Showing {rows.length} of {totalElements} votes
-                  </p>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                      disabled={page <= 0 || !!leaderboardPage?.first}
-                      data-testid="button-prev-page"
-                    >
-                      Previous
-                    </Button>
-
-                    <span className="font-retro text-sm text-foreground/90" data-testid="text-page-indicator">
-                      Page {currentPage} of {totalPages}
-                    </span>
-
-                    <Button
-                      variant="outline"
-                      onClick={() => setPage((prev) => prev + 1)}
-                      disabled={!leaderboardPage || leaderboardPage.last}
-                      data-testid="button-next-page"
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          {/* Tab Content */}
+          {activeTab === "cast" && (
+            <CastVote
+              hasPendingVote={hasPendingVote}
+              voteSuccessMessage={voteSuccessMessage}
+              isPending={voteMutation.isPending}
+              voteFormError={voteFormError}
+              voteUserName={voteUserName}
+              voteDirection={voteDirection}
+              voteHours={voteHours}
+              voteMinutes={voteMinutes}
+              voteSeconds={voteSeconds}
+              onUserNameChange={setVoteUserName}
+              onDirectionChange={setVoteDirection}
+              onHoursChange={setVoteHours}
+              onMinutesChange={setVoteMinutes}
+              onSecondsChange={setVoteSeconds}
+              onSubmit={handleSubmitVote}
+            />
           )}
+
+          {activeTab === "results" && <VoteResults />}
         </div>
       </main>
     </div>

@@ -21,9 +21,7 @@ import { Clock, Info, TrendingUp } from "lucide-react";
 import { formatDurationVerbose, formatLateTime, formatTimeStatusDelta } from "../lib/utils";
 import Logo from "../../game/images/l3l3.png";
 
-function getVoteStorageKey(videoId: string): string {
-  return `vote:submitted:${videoId}`;
-}
+const PENDING_VOTE_STORAGE_KEY = "vote:submitted:pending";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -47,33 +45,18 @@ export default function Dashboard() {
   });
 
   const mostRecentLivestream = recentLivestreamPage?.content[0] ?? null;
-  const latestVideoId = mostRecentLivestream?.videoId ?? null;
-  const isMostRecentScheduled = mostRecentLivestream?.status === "SCHEDULED";
-  const canViewVoteResults =
-    mostRecentLivestream?.status === "LIVE" || mostRecentLivestream?.status === "ENDED";
-
   const hasMostRecentLivestream = mostRecentLivestream !== null;
-  const canVoteFromDashboard = !hasMostRecentLivestream || isMostRecentScheduled;
 
   useEffect(() => {
-    if (!latestVideoId) {
-      setHasVotedForLatest(false);
-      return;
-    }
-
     try {
-      const hasStoredVote = window.localStorage.getItem(getVoteStorageKey(latestVideoId)) === "true";
-      setHasVotedForLatest(hasStoredVote);
+      setHasVotedForLatest(window.localStorage.getItem(PENDING_VOTE_STORAGE_KEY) !== null);
     } catch {
       setHasVotedForLatest(false);
     }
-  }, [latestVideoId]);
+  }, []);
 
-  const handleMostRecentActionClick = () => {
-    if (canVoteFromDashboard || canViewVoteResults) {
-      setLocation("/vote");
-    }
-  };
+  const handleVoteClick = () => setLocation("/vote?tab=cast");
+  const handleResultsClick = () => setLocation("/vote?tab=results");
 
   if (
     statsLoading ||
@@ -116,14 +99,6 @@ export default function Dashboard() {
   : mostRecentLivestream.status === "SCHEDULED"
     ? "SCHEDULED • Voting Open"
     : `${mostRecentLivestream.timeStatus} • ${mostRecentLivestream.status}`;
-
-  const mostRecentActionLabel = canVoteFromDashboard
-  ? "Vote how late"
-  : canViewVoteResults
-    ? "View vote results"
-    : undefined;
-
-  const mostRecentActionDisabled = isMostRecentScheduled ? hasVotedForLatest : false;
 
   const lastUpdatedDate = mostRecentLivestream?.createdAt
     ? new Date(mostRecentLivestream.createdAt).toLocaleDateString()
@@ -199,10 +174,15 @@ export default function Dashboard() {
               subtitle={mostRecentLivestream?.title ?? "No recent stream found"}
               detail={mostRecentDetail}
               videoId={mostRecentLivestream?.videoId}
-              actionLabel={mostRecentActionLabel}
-              actionDisabled={mostRecentActionDisabled}
-              onActionClick={mostRecentActionLabel ? handleMostRecentActionClick : undefined}
-              actionTestId="button-most-recent-action"
+              actionLabel={hasVotedForLatest ? "Vote Submitted" : "Vote"}
+              actionDisabled={hasVotedForLatest}
+              actionChecked={hasVotedForLatest}
+              onActionClick={handleVoteClick}
+              actionTestId="button-most-recent-vote"
+              secondaryActionLabel="Previous Results"
+              onSecondaryActionClick={handleResultsClick}
+              secondaryActionTestId="button-most-recent-results"
+              actionsLabel="How late will the next stream be?"
             />
             
             <StatCard
