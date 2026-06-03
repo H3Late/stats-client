@@ -1,7 +1,7 @@
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
-import { type LucideIcon, ExternalLink } from "lucide-react";
+import { type LucideIcon, ExternalLink, Check } from "lucide-react";
 
 interface StatCardProps {
   icon: LucideIcon;
@@ -13,8 +13,14 @@ interface StatCardProps {
   videoId?: string | null;
   actionLabel?: string;
   actionDisabled?: boolean;
+  actionChecked?: boolean;
   onActionClick?: () => void;
   actionTestId?: string;
+  secondaryActionLabel?: string;
+  onSecondaryActionClick?: () => void;
+  secondaryActionTestId?: string;
+  actionsLabel?: string;
+  actionsLabelClassName?: string;
 }
 
 export function StatCard({
@@ -27,8 +33,14 @@ export function StatCard({
   videoId,
   actionLabel,
   actionDisabled = false,
+  actionChecked = false,
   onActionClick,
   actionTestId,
+  secondaryActionLabel,
+  onSecondaryActionClick,
+  secondaryActionTestId,
+  actionsLabel,
+  actionsLabelClassName,
 }: StatCardProps) {
   const handleWatchOnYouTube = () => {
     if (videoId) {
@@ -75,19 +87,43 @@ export function StatCard({
           </div>
         </div>
 
-        {(actionLabel || videoId) && (
+        {(actionLabel || secondaryActionLabel || videoId) && (
           <div className="mt-4 space-y-2">
-            {actionLabel && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onActionClick}
-                disabled={actionDisabled || !onActionClick}
-                className="font-retro text-xs uppercase tracking-wide flex items-center justify-center gap-2 w-full h-12"
-                data-testid={actionTestId ?? `button-action-${label.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                {actionLabel}
-              </Button>
+            {actionsLabel && (
+              <span className={cn("font-retro text-lg uppercase tracking-wide text-muted-foreground block", actionsLabelClassName)}>
+                {actionsLabel}
+              </span>
+            )}
+
+            {(actionLabel || secondaryActionLabel) && (
+              <div className={secondaryActionLabel && actionLabel ? "grid grid-cols-1 md:grid-cols-2 gap-2" : undefined}>
+                {actionLabel && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onActionClick}
+                    disabled={actionDisabled || !onActionClick}
+                    className="font-retro text-xs uppercase tracking-wide flex items-center justify-center gap-2 w-full h-12"
+                    data-testid={actionTestId ?? `button-action-${label.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {actionChecked && <Check className="w-4 h-4" />}
+                    {actionLabel}
+                  </Button>
+                )}
+
+                {secondaryActionLabel && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onSecondaryActionClick}
+                    disabled={!onSecondaryActionClick}
+                    className="font-retro text-xs uppercase tracking-wide flex items-center justify-center gap-2 w-full h-12"
+                    data-testid={secondaryActionTestId ?? `button-secondary-action-${label.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {secondaryActionLabel}
+                  </Button>
+                )}
+              </div>
             )}
 
             {videoId && (

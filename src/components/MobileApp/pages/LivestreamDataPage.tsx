@@ -1,8 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowLeft, Tv } from "lucide-react";
+import { ArrowLeft, Tv, X } from "lucide-react";
 import { FaYoutube } from "react-icons/fa";
+import {
+  DataGrid,
+  GridFilterPanel,
+  Toolbar,
+  ToolbarButton,
+  FilterPanelTrigger,
+} from "@mui/x-data-grid";
+import type { GridColDef, GridFilterModel, GridSortModel } from "@mui/x-data-grid";
+import Badge from "@mui/material/Badge";
+import Tooltip from "@mui/material/Tooltip";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
@@ -17,35 +28,30 @@ import { formatTimeStatusDelta } from "../lib/utils";
 
 type StatusFilter = "ALL" | LivestreamStatus;
 type TimeStatusFilter = "ALL" | TimeStatus;
-type SortField = "actualStart" | "scheduledStart" | "diffSeconds" | "title" | "duration";
-type SortDirection = "asc" | "desc";
+type SortField = "actualStart" | "scheduledStart" | "diffSeconds" | "title" | "totalDurationSeconds";
+
+declare module "@mui/x-data-grid" {
+  interface ToolbarPropsOverrides {
+    searchQuery: string;
+    onSearchChange: (value: string) => void;
+  }
+}
 
 function formatDateTime(value: string | null): string {
-  if (!value) {
-    return "—";
-  }
-
+  if (!value) return "—";
   return new Date(value).toLocaleString();
 }
 
 function formatDuration(seconds: number | null): string {
-  if (seconds === null) {
-    return "—";
-  }
+  if (seconds === null) return "—";
 
   const absSeconds = Math.max(0, Math.round(seconds));
   const hours = Math.floor(absSeconds / 3600);
   const minutes = Math.floor((absSeconds % 3600) / 60);
   const remainingSeconds = absSeconds % 60;
 
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${remainingSeconds}s`;
-  }
-
-  if (minutes > 0) {
-    return `${minutes}m ${remainingSeconds}s`;
-  }
-
+  if (hours > 0) return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`;
   return `${remainingSeconds}s`;
 }
 
@@ -75,6 +81,68 @@ function timeStatusBadgeClass(timeStatus: TimeStatus): string {
   }
 }
 
+const SORTABLE_FIELDS: Record<string, SortField> = {
+  actualStart: "actualStart",
+  scheduledStart: "scheduledStart",
+  diffSeconds: "diffSeconds",
+  title: "title",
+  totalDurationSeconds: "totalDurationSeconds",
+};
+
+function LivestreamToolbar({
+  searchQuery,
+  onSearchChange,
+}: {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+}) {
+  return (
+    <Toolbar style={{ justifyContent: "flex-start", padding: "36px 12px" }}>
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => onSearchChange(e.target.value)}
+        placeholder="Search by video ID or title..."
+        className="h-12 flex-1 min-w-[180px] max-w-sm rounded-md border border-input bg-background px-3 font-retro text-sm placeholder:text-muted-foreground/50"
+        data-testid="input-search"
+      />
+      <Tooltip title="Filters">
+        <FilterPanelTrigger
+          render={(props, state) => (
+            <ToolbarButton {...props}>
+              <Badge badgeContent={state.filterCount} color="primary" variant="dot">
+                <FilterListIcon fontSize="small" />
+              </Badge>
+            </ToolbarButton>
+          )}
+        />
+      </Tooltip>
+    </Toolbar>
+  );
+}
+
+function CustomFilterPanel(props: React.ComponentProps<typeof GridFilterPanel>) {
+  return (
+    <div>
+      <div className="hidden sm:flex items-center px-3 py-2 border-b border-border/40">
+        <span className="font-retro text-sm uppercase tracking-wide text-muted-foreground">
+          Add a filter
+        </span>
+      </div>
+      <GridFilterPanel {...props} />
+    </div>
+  );
+}
+
+function CancelFilterIcon() {
+  return (
+    <span className="flex items-center gap-1 font-retro text-sm">
+      <X className="w-3.5 h-3.5" />
+      Cancel
+    </span>
+  );
+}
+
 export default function LivestreamDataPage() {
   const [, setLocation] = useLocation();
 
@@ -83,17 +151,15 @@ export default function LivestreamDataPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [timeStatusFilter, setTimeStatusFilter] = useState<TimeStatusFilter>("ALL");
   const [sortField, setSortField] = useState<SortField>("actualStart");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPage(0); // Reset to first page when search changes
+      setPage(0);
     }, 1500);
-
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -102,19 +168,9 @@ export default function LivestreamDataPage() {
     params.set("page", String(page));
     params.set("size", String(pageSize));
     params.set("sort", `${sortField},${sortDirection}`);
-
-    if (statusFilter !== "ALL") {
-      params.set("status", statusFilter);
-    }
-
-    if (timeStatusFilter !== "ALL") {
-      params.set("timeStatus", timeStatusFilter);
-    }
-
-    if (debouncedSearch.trim()) {
-      params.set("search", debouncedSearch.trim());
-    }
-
+    if (statusFilter !== "ALL") params.set("status", statusFilter);
+    if (timeStatusFilter !== "ALL") params.set("timeStatus", timeStatusFilter);
+    if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
     return `/api/livestream?${params.toString()}`;
   }, [page, pageSize, sortField, sortDirection, statusFilter, timeStatusFilter, debouncedSearch]);
 
@@ -123,13 +179,151 @@ export default function LivestreamDataPage() {
     placeholderData: keepPreviousData,
   });
 
+  const sortModel = useMemo(
+    () => [{ field: sortField, sort: sortDirection }],
+    [sortField, sortDirection],
+  );
+
+  function handleSortModelChange(model: GridSortModel) {
+    const newField = model[0] ? SORTABLE_FIELDS[model[0].field] : "actualStart";
+    const newDirection = model[0]?.sort ?? "desc";
+    if (!newField || (newField === sortField && newDirection === sortDirection)) return;
+    setSortField(newField);
+    setSortDirection(newDirection);
+    setPage(0);
+  }
+
+  function handleFilterModelChange(model: GridFilterModel) {
+    const statusItem = model.items.find((item) => item.field === "status" && item.value);
+    const newStatus = (statusItem?.value as StatusFilter) ?? "ALL";
+
+    const timeStatusItem = model.items.find((item) => item.field === "timeStatus" && item.value);
+    const newTimeStatus = (timeStatusItem?.value as TimeStatusFilter) ?? "ALL";
+
+    if (newStatus === statusFilter && newTimeStatus === timeStatusFilter) return;
+    setStatusFilter(newStatus);
+    setTimeStatusFilter(newTimeStatus);
+    setPage(0);
+  }
+
+  const columns: GridColDef<LivestreamRecord>[] = useMemo(() => [
+    {
+      field: "videoId",
+      headerName: "Video ID",
+      width: 120,
+      sortable: false,
+      filterable: false,
+      renderCell: ({ value }) => (
+        <span className="font-retro text-sm text-foreground/80">{value}</span>
+      ),
+    },
+    {
+      field: "title",
+      headerName: "Title",
+      flex: 1,
+      minWidth: 260,
+      sortable: true,
+      filterable: false,
+      renderCell: ({ row }) => (
+        <div className="flex items-start gap-2 py-1 w-full">
+          <div className="line-clamp-2 flex-1 min-w-0 font-retro text-sm text-foreground">
+            {row.title}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="group relative h-7 w-7 shrink-0 text-[#7462B3] hover:bg-[#d2758e]/10 hover:text-[#d2758e]"
+            onClick={() => {
+              window.location.href = `https://www.youtube.com/watch?v=${row.videoId}`;
+            }}
+            data-testid={`button-watch-youtube-${row.videoId}`}
+            aria-label="Watch on youtube"
+          >
+            <FaYoutube className="h-4 w-4" />
+            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-card px-2 py-1 font-retro text-[10px] uppercase tracking-wide text-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              Watch on youtube
+            </span>
+          </Button>
+        </div>
+      ),
+    },
+    {
+      field: "scheduledStart",
+      headerName: "Scheduled Start",
+      width: 170,
+      sortable: true,
+      filterable: false,
+      renderCell: ({ value }) => (
+        <span className="font-retro text-sm text-foreground/80">{formatDateTime(value)}</span>
+      ),
+    },
+    {
+      field: "actualStart",
+      headerName: "Actual Start",
+      width: 170,
+      sortable: true,
+      filterable: false,
+      renderCell: ({ value }) => (
+        <span className="font-retro text-sm text-foreground/80">{formatDateTime(value)}</span>
+      ),
+    },
+    {
+      field: "diffSeconds",
+      headerName: "Difference",
+      width: 130,
+      sortable: true,
+      filterable: false,
+      renderCell: ({ row }) => (
+        <span className="font-retro text-sm text-foreground/90">
+          {formatTimeStatusDelta(row.diffSeconds, row.timeStatus)}
+        </span>
+      ),
+    },
+    {
+      field: "timeStatus",
+      headerName: "Time Status",
+      width: 120,
+      sortable: false,
+      filterable: true,
+      type: "singleSelect",
+      valueOptions: ["LATE", "EARLY", "ON_TIME"],
+      renderCell: ({ value }) => (
+        <span className={`inline-flex rounded border px-2 py-0.5 font-retro text-xs ${timeStatusBadgeClass(value)}`}>
+          {value}
+        </span>
+      ),
+    },
+    {
+      field: "status",
+      headerName: "Stream Status",
+      width: 130,
+      sortable: false,
+      filterable: true,
+      type: "singleSelect",
+      valueOptions: ["LIVE", "SCHEDULED", "ENDED", "CANCELLED"],
+      renderCell: ({ value }) => (
+        <span className={`inline-flex rounded border px-2 py-0.5 font-retro text-xs ${statusBadgeClass(value)}`}>
+          {value}
+        </span>
+      ),
+    },
+    {
+      field: "totalDurationSeconds",
+      headerName: "Stream Duration",
+      width: 140,
+      sortable: true,
+      filterable: false,
+      renderCell: ({ value }) => (
+        <span className="font-retro text-sm text-foreground/80">{formatDuration(value)}</span>
+      ),
+    },
+  ], []);
+
   if (isPending && !data) {
     return <LoadingScreen />;
   }
 
   const rows = data?.content ?? [];
-  const currentPage = (data?.number ?? page) + 1;
-  const totalPages = Math.max(data?.totalPages ?? 1, 1);
   const totalElements = data?.totalElements ?? 0;
 
   return (
@@ -157,7 +351,10 @@ export default function LivestreamDataPage() {
             </div>
 
             <div className="min-w-0">
-              <h1 className="font-pixel text-lg md:text-2xl text-primary truncate drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" data-testid="heading-livestream-data">
+              <h1
+                className="font-pixel text-lg md:text-2xl text-primary truncate drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                data-testid="heading-livestream-data"
+              >
                 LIVESTREAMS
               </h1>
             </div>
@@ -169,231 +366,61 @@ export default function LivestreamDataPage() {
 
       <main className="relative z-10 pt-24 pb-8">
         <div className="container mx-auto px-4 space-y-6">
-          <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20 mt-20">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+          <Card className="relative overflow-hidden border-2 border-secondary/40 bg-card/95 backdrop-blur-sm p-0 shadow-lg shadow-secondary/20 mt-20">
+            <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent pointer-events-none z-0" />
 
-            <div className="relative z-10 space-y-3">
-              <label className="flex flex-col gap-1">
-                <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Search (Video ID or Title)</span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Type to search..."
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm placeholder:text-muted-foreground/50"
-                  data-testid="input-search"
-                />
-              </label>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-              <label className="flex flex-col gap-1">
-                <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Status</span>
-                <select
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as StatusFilter);
-                    setPage(0);
-                  }}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                  data-testid="select-status-filter"
-                >
-                  <option value="ALL">All</option>
-                  <option value="LIVE">LIVE</option>
-                  <option value="SCHEDULED">SCHEDULED</option>
-                  <option value="ENDED">ENDED</option>
-                  <option value="CANCELLED">CANCELLED</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Time Status</span>
-                <select
-                  value={timeStatusFilter}
-                  onChange={(event) => {
-                    setTimeStatusFilter(event.target.value as TimeStatusFilter);
-                    setPage(0);
-                  }}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm pr-8"
-                  data-testid="select-time-status-filter"
-                >
-                  <option value="ALL">All</option>
-                  <option value="LATE">LATE</option>
-                  <option value="EARLY">EARLY</option>
-                  <option value="ON_TIME">ON_TIME</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Sort By</span>
-                <select
-                  value={sortField}
-                  onChange={(event) => {
-                    setSortField(event.target.value as SortField);
-                    setPage(0);
-                  }}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                  data-testid="select-sort-field"
-                >
-                  <option value="actualStart">Actual Start</option>
-                  <option value="scheduledStart">Scheduled Start</option>
-                  <option value="diffSeconds">Lateness</option>
-                  <option value="title">Title</option>
-                  <option value="totalDurationSeconds">Duration</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Direction</span>
-                <select
-                  value={sortDirection}
-                  onChange={(event) => {
-                    setSortDirection(event.target.value as SortDirection);
-                    setPage(0);
-                  }}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                  data-testid="select-sort-direction"
-                >
-                  <option value="desc">DESC</option>
-                  <option value="asc">ASC</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-retro text-xs uppercase tracking-wide text-muted-foreground">Page Size</span>
-                <select
-                  value={pageSize}
-                  onChange={(event) => {
-                    setPageSize(Number(event.target.value));
-                    setPage(0);
-                  }}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 font-retro text-sm"
-                  data-testid="select-page-size"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-              </label>
-              </div>
+            <div className="relative z-10">
+              <DataGrid
+                rows={rows}
+                columns={columns}
+                getRowId={(row) => row.videoId}
+                loading={isFetching}
+                rowCount={totalElements}
+                paginationMode="server"
+                sortingMode="server"
+                filterMode="server"
+                paginationModel={{ page, pageSize }}
+                onPaginationModelChange={({ page: p, pageSize: ps }) => {
+                  setPage(p);
+                  setPageSize(ps);
+                }}
+                sortModel={sortModel}
+                onSortModelChange={handleSortModelChange}
+                onFilterModelChange={handleFilterModelChange}
+                pageSizeOptions={[10, 25, 50]}
+                showToolbar
+                slots={{
+                  toolbar: LivestreamToolbar,
+                  filterPanel: CustomFilterPanel,
+                  filterPanelDeleteIcon: CancelFilterIcon,
+                  noRowsOverlay: () => (
+                    <div
+                      className="flex items-center justify-center h-full font-retro text-muted-foreground"
+                      data-testid="table-empty-state"
+                    >
+                      No livestream records found for the current filters.
+                    </div>
+                  ),
+                }}
+                slotProps={{
+                  filterPanel: {
+                    filterFormProps: {
+                      deleteIconProps: {
+                        sx: { width: "auto", px: 1, borderRadius: 1 },
+                      },
+                    },
+                  },
+                  toolbar: {
+                    searchQuery,
+                    onSearchChange: setSearchQuery,
+                  },
+                }}
+                disableRowSelectionOnClick
+                autoHeight
+                sx={{ minWidth: 0 }}
+              />
             </div>
           </Card>
-
-          <Card className="relative overflow-hidden border-2 border-secondary/40 bg-card/95 backdrop-blur-sm p-0 shadow-lg shadow-secondary/20">
-            <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent pointer-events-none" />
-
-            {isFetching && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center bg-card/70 backdrop-blur-[1px]">
-                <div className="font-retro text-sm text-muted-foreground animate-pulse" data-testid="table-loading-overlay">
-                  Loading table data...
-                </div>
-              </div>
-            )}
-
-            <div className="relative z-10 overflow-x-auto">
-              <table className="w-full min-w-[1200px] border-collapse">
-                <thead>
-                  <tr className="border-b border-border/60 bg-muted/20">
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Video ID</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Title</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Scheduled Start</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Actual Start </th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Difference</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Time Status</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Stream Status</th>
-                    <th className="px-4 py-3 text-left font-retro text-xs uppercase tracking-wider text-muted-foreground">Stream Duration</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {rows.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="px-4 py-8 text-center font-retro text-muted-foreground"
-                        data-testid="table-empty-state"
-                      >
-                        No livestream records found for the current filters.
-                      </td>
-                    </tr>
-                  ) : (
-                    rows.map((stream) => (
-                      <tr key={stream.videoId} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/80">{stream.videoId}</td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground max-w-[340px]">
-                          <div className="flex items-start gap-2">
-                            <div className="line-clamp-2 flex-1 min-w-0">{stream.title}</div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="group relative h-7 w-7 shrink-0 text-[#7462B3] hover:bg-[#d2758e]/10 hover:text-[#d2758e]"
-                              onClick={() => {
-                                window.location.href = `https://www.youtube.com/watch?v=${stream.videoId}`;
-                              }}
-                              data-testid={`button-watch-youtube-${stream.videoId}`}
-                              aria-label="Watch on youtube"
-                            >
-                              <FaYoutube className="h-4 w-4" />
-                              <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-card px-2 py-1 font-retro text-[10px] uppercase tracking-wide text-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                Watch on youtube
-                              </span>
-                            </Button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDateTime(stream.scheduledStart)}</td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDateTime(stream.actualStart)}</td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/90">
-                          {formatTimeStatusDelta(stream.diffSeconds, stream.timeStatus)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded border px-2 py-0.5 font-retro text-xs ${timeStatusBadgeClass(stream.timeStatus)}`}
-                          >
-                            {stream.timeStatus}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex rounded border px-2 py-0.5 font-retro text-xs ${statusBadgeClass(stream.status)}`}>
-                            {stream.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-retro text-sm text-foreground/80">{formatDuration(stream.totalDurationSeconds)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="font-retro text-sm text-muted-foreground" data-testid="text-table-summary">
-              Showing {rows.length} of {totalElements} records
-            </p>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                disabled={page <= 0 || !!data?.first}
-                data-testid="button-prev-page"
-              >
-                Previous
-              </Button>
-
-              <span className="font-retro text-sm text-foreground/90" data-testid="text-page-indicator">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <Button
-                variant="outline"
-                onClick={() => setPage((prev) => prev + 1)}
-                disabled={!data || data.last}
-                data-testid="button-next-page"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
         </div>
       </main>
     </div>

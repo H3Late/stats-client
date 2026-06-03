@@ -7,18 +7,16 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatLateTime(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = Math.round((seconds % 60) * 10) / 10;
-  
-  if (minutes === 0) {
-    return `${remainingSeconds}s`;
-  }
-  
-  if (remainingSeconds === 0) {
-    return `${minutes}m`;
-  }
-  
-  return `${minutes}m ${remainingSeconds}s`;
+
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (remainingSeconds > 0 || parts.length === 0) parts.push(`${remainingSeconds}s`);
+
+  return parts.join(" ");
 }
 
 export function formatLateTimeVerbose(seconds: number): { minutes: number; seconds: number; formatted: string } {
