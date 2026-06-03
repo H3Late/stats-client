@@ -135,21 +135,14 @@ export function createAppTheme(mode: "light" | "dark") {
             overflowX: "auto",
           },
           filterForm: {
-            flexWrap: "wrap",
-            gap: "8px",
-            padding: "8px",
+            gap: "4px",
+            padding: "4px",
           },
           filterFormColumnInput: {
-            flex: "1 1 140px",
-            minWidth: "120px",
           },
           filterFormOperatorInput: {
-            flex: "1 1 120px",
-            minWidth: "100px",
           },
           filterFormValueInput: {
-            flex: "1 1 140px",
-            minWidth: "120px",
           },
         },
       },
