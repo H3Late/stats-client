@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowLeft, Tv } from "lucide-react";
+import { ArrowLeft, Tv, X } from "lucide-react";
 import { FaYoutube } from "react-icons/fa";
 import {
   DataGrid,
+  GridFilterPanel,
   Toolbar,
   ToolbarButton,
   FilterPanelTrigger,
@@ -117,6 +118,28 @@ function LivestreamToolbar({
         />
       </Tooltip>
     </Toolbar>
+  );
+}
+
+function CustomFilterPanel(props: React.ComponentProps<typeof GridFilterPanel>) {
+  return (
+    <div>
+      <div className="hidden sm:flex items-center px-3 py-2 border-b border-border/40">
+        <span className="font-retro text-sm uppercase tracking-wide text-muted-foreground">
+          Add a filter
+        </span>
+      </div>
+      <GridFilterPanel {...props} />
+    </div>
+  );
+}
+
+function CancelFilterIcon() {
+  return (
+    <span className="flex items-center gap-1 font-retro text-sm">
+      <X className="w-3.5 h-3.5" />
+      Cancel
+    </span>
   );
 }
 
@@ -368,6 +391,8 @@ export default function LivestreamDataPage() {
                 showToolbar
                 slots={{
                   toolbar: LivestreamToolbar,
+                  filterPanel: CustomFilterPanel,
+                  filterPanelDeleteIcon: CancelFilterIcon,
                   noRowsOverlay: () => (
                     <div
                       className="flex items-center justify-center h-full font-retro text-muted-foreground"
@@ -378,6 +403,13 @@ export default function LivestreamDataPage() {
                   ),
                 }}
                 slotProps={{
+                  filterPanel: {
+                    filterFormProps: {
+                      deleteIconProps: {
+                        sx: { width: "auto", px: 1, borderRadius: 1 },
+                      },
+                    },
+                  },
                   toolbar: {
                     searchQuery,
                     onSearchChange: setSearchQuery,

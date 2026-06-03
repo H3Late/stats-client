@@ -133,17 +133,42 @@ export function createAppTheme(mode: "light" | "dark") {
           },
           panelContent: {
             overflowX: "auto",
+            "@media (min-width: 601px)": {
+              "& .MuiDataGrid-panelContent": {
+                padding: "0px 20px 20px 20px",
+              },            },
           },
+          
           filterForm: {
-            gap: "4px",
-            padding: "4px",
+            gap: "8px",
+            padding: "8px",
+            "& .MuiDataGrid-filterFormDeleteIcon": {
+              width: "auto",
+            },
+            "@media (min-width: 601px)": {
+              "&.MuiDataGrid-filterForm": { paddingTop: 0 },
+            },
+            "@media (max-width: 600px)": {
+              flexDirection: "column",
+              alignItems: "flex-start",
+              "&::before": {
+                content: '"Add a filter"',
+                order: 0,
+                fontFamily: FONT,
+                fontSize: "0.875rem",
+                color: p.textSecondary,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              },
+              "& .MuiDataGrid-filterFormColumnInput": { order: 1, width: "75vw" },
+              "& .MuiDataGrid-filterFormOperatorInput": { order: 2, width: "75vw" },
+              "& .MuiDataGrid-filterFormValueInput": { order: 3, width: "75vw" },
+              "& .MuiDataGrid-filterFormDeleteIcon": { order: 4, width: "auto" },
+            },
           },
-          filterFormColumnInput: {
-          },
-          filterFormOperatorInput: {
-          },
-          filterFormValueInput: {
-          },
+          filterFormColumnInput: {},
+          filterFormOperatorInput: {},
+          filterFormValueInput: {},
         },
       },
       MuiTablePagination: {
