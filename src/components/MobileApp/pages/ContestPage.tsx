@@ -167,7 +167,7 @@ export default function ContestPage() {
         <div className="container mx-auto px-4 space-y-6 pt-4 md:pt-0">
 
           {/* No active contest */}
-          {contest === null && (
+          {contest == null && (
             <div className="flex flex-col items-center justify-center py-24 text-center space-y-5 mt-20">
               <div className="p-4 rounded-full bg-muted/30 border border-border">
                 <Trophy className="w-12 h-12 text-muted-foreground/50" />
@@ -190,7 +190,7 @@ export default function ContestPage() {
           )}
 
           {/* Active contest */}
-          {contest !== null && (
+          {contest != null && (
             <>
               {/* Contest banner */}
               <Card className="relative overflow-hidden border-2 border-primary/40 bg-card/95 backdrop-blur-sm p-4 md:p-6 shadow-lg shadow-primary/20 mt-20">
@@ -373,7 +373,7 @@ export default function ContestPage() {
       </main>
 
       {/* Submit modal */}
-      {contest !== null && (
+      {contest != null && (
         <SubmitClipModal
           open={submitOpen}
           onOpenChange={setSubmitOpen}

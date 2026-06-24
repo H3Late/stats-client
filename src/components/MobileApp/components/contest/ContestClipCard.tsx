@@ -90,9 +90,6 @@ export function ContestClipCard({
     },
   });
 
-  const canVote = contestActive && !hasVoted && votesRemaining > 0 && !isMyClip;
-  const canUnvote = contestActive && hasVoted && !isMyClip;
-
   const borderColor =
     rank === 1
       ? "border-yellow-500/60 shadow-yellow-500/20"

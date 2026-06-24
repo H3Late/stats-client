@@ -12,7 +12,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import type { Contest } from "../../shared/contestSchema";
-import type { LivestreamRecord, PaginatedResponse } from "../../shared/schema";
+import type { LivestreamRecord } from "../../shared/schema";
 import { apiRequest } from "../../lib/queryClient";
 import { saveSubmitterName } from "../../hooks/useVoterToken";
 
