@@ -17,7 +17,7 @@ import { LoadingScreen } from "../components/LoadingScreen";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { Button } from "../components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
-import { Clock, Info, TrendingUp } from "lucide-react";
+import { Clock, Film, Info, TrendingUp } from "lucide-react";
 import { formatDurationVerbose, formatLateTime, formatTimeStatusDelta } from "../lib/utils";
 import Logo from "../../game/images/l3l3.png";
 
@@ -213,7 +213,7 @@ export default function Dashboard() {
             <DayOfWeekChart dailyStats={dailyStats} />
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-3 flex-wrap">
             <Button
               variant="secondary"
               className="font-retro uppercase tracking-wide"
@@ -221,6 +221,15 @@ export default function Dashboard() {
               data-testid="button-view-full-dataset"
             >
               View Full Dataset
+            </Button>
+            <Button
+              variant="outline"
+              className="font-retro uppercase tracking-wide"
+              onClick={() => setLocation('/contest')}
+              data-testid="button-clip-contest"
+            >
+              <Film className="w-4 h-4 mr-2" />
+              Clip Contest
             </Button>
           </div>
 
